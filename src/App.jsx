@@ -35,24 +35,21 @@ function App() {
   }, [])
 
   // Sprawdzamy, czy w adresie URL jest fragment od resetu hasła
-  const isPasswordRecovery = location.hash.includes('type=recovery')
+ const isPasswordRecovery = location.pathname === '/update-password'
 
-  if (loading && !isPasswordRecovery) {
-    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
-  }
+if (loading && !isPasswordRecovery) {
+  return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
+}
 
-  // --- OSTATECZNA LOGIKA ---
+if (isPasswordRecovery) {
+  return (
+    <div className="dark min-h-screen bg-background text-foreground">
+      <UpdatePassword />
+      <Toaster />
+    </div>
+  )
+}
 
-  // Jeśli adres URL wskazuje na reset hasła, ZAWSZE I BEZWARUNKOWO
-  // pokazuj stronę do zmiany hasła. To jest najważniejszy warunek.
-  if (isPasswordRecovery) {
-    return (
-      <div className="dark min-h-screen bg-background text-foreground">
-        <UpdatePassword />
-        <Toaster />
-      </div>
-    )
-  }
 
   // Jeśli nie resetujemy hasła, to sprawdzamy, czy jest sesja.
   // Jeśli jest, pokazujemy główną aplikację.
