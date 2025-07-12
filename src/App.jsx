@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { Menu } from 'lucide-react'
+
+// Komponenty UI
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/toaster'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+
+// Strony
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import AddProduct from './pages/AddProduct'
@@ -17,13 +21,13 @@ function App() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Sprawdzamy sesję przy pierwszym załadowaniu
+    // Sprawdzamy sesję tylko raz na początku
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
     })
 
-    // Nasłuchujemy na zmiany
+    // Nasłuchujemy na przyszłe zmiany
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
@@ -35,16 +39,14 @@ function App() {
     return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
   }
 
-  // Toaster jest teraz na zewnątrz, więc zawsze się renderuje.
-  // Główny routing jest oparty na prostym warunku `session`.
   return (
     <div className="dark min-h-screen bg-background text-foreground">
       <Routes>
         {session ? (
-          // --- ŚCIEŻKI DLA ZALOGOWANEGO UŻYTKOWNIKA ---
+          // Jeśli jest sesja, ZAWSZE renderuj główną aplikację
           <Route path="/*" element={<MainApp />} />
         ) : (
-          // --- ŚCIEŻKI DLA NIEZALOGOWANEGO UŻYTKOWNIKA ---
+          // Jeśli NIE MA sesji, ZAWSZE renderuj strony publiczne
           <>
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="*" element={<Auth />} />
@@ -56,7 +58,7 @@ function App() {
   )
 }
 
-// Komponent dla głównej części aplikacji
+// Komponent dla głównej części aplikacji po zalogowaniu
 function MainApp() {
   const navigate = useNavigate();
   const handleLogout = () => {
@@ -95,6 +97,7 @@ function MainApp() {
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
+          {/* Strona zmiany hasła jest też tutaj, na wypadek gdyby zalogowany użytkownik chciał zmienić hasło */}
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
