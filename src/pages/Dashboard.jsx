@@ -1,26 +1,62 @@
-import { useState, useEffect, useMemo } from 'react'
+// src/pages/Dashboard.jsx - OSTATECZNA WERSJA ZE SKANEREM QR
+
+import { useState, useEffect, useMemo, useRef } from 'react' // Dodajemy useRef
 import { supabase } from '@/supabaseClient'
+import { Html5QrcodeScanner } from 'html5-qrcode' // Importujemy skaner
 import { Input } from "@/components/ui/input"
+import { Button } from "@/components/ui/button" // Importujemy Button
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import ProductListItem from '@/components/ProductListItem'
 
-// Importujemy brakujące komponenty, których używa ProductListItem
-import { Link } from 'react-router-dom'
-import * as QRCode from 'qrcode.react'
-import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-
+const qrcodeRegionId = "html5qr-code-full-region"; // ID dla kontenera skanera
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [openAccordionItems, setOpenAccordionItems] = useState([]);
+  
+  // Stany i ref dla skanera QR
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const scannerRef = useRef(null);
 
   useEffect(() => {
     getProducts()
   }, []);
+
+  // UseEffect do zarządzania instancją skanera
+  useEffect(() => {
+    if (isScannerOpen) {
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5QrcodeScanner(
+          qrcodeRegionId,
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          false // verbose = false
+        );
+      }
+      scannerRef.current.render(onScanSuccess, onScanFailure);
+    } else {
+      if (scannerRef.current && scannerRef.current.getState() === 2) { // 2 = SCANNING
+        scannerRef.current.clear().catch(error => {
+          console.error("Nie udało się wyczyścić skanera.", error);
+        });
+      }
+    }
+    return () => {
+      if (scannerRef.current && scannerRef.current.getState() === 2) {
+        scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia przy odmontowaniu.", error));
+      }
+    };
+  }, [isScannerOpen]);
+
+  // Funkcja wywoływana po udanym skanie
+  function onScanSuccess(decodedText) {
+    setSearchTerm(decodedText); // Ustawiamy ID produktu jako wyszukiwaną frazę
+    setIsScannerOpen(false); // Zamykamy skaner
+  }
+  function onScanFailure(error) { /* Celowo puste */ }
+
 
   async function getProducts() {
     setLoading(true);
@@ -41,29 +77,24 @@ export default function Dashboard() {
         product.nazwa.toLowerCase().includes(searchTermLower) ||
         product.kategoria.toLowerCase().includes(searchTermLower) ||
         podkategoria.toLowerCase().includes(searchTermLower) ||
-        String(product.id) === searchTerm
+        String(product.id) === searchTerm // Kluczowe dla wyszukiwania po ID z QR
       );
     });
 
-    if (filtered.length === 1 && searchTerm.length > 0) {
+    if (filtered.length === 1 && searchTerm) {
       const singleProduct = filtered[0];
       const categoryKey = `category-${singleProduct.kategoria}`;
       const subcategoryKey = `subcategory-${singleProduct.podkategoria || 'Bez podkategorii'}`;
-      // Używamy funkcji zwrotnej, żeby uniknąć pętli renderowania
-      setOpenAccordionItems(prev => [categoryKey, subcategoryKey]);
-    } else if (searchTerm.length === 0) {
+      setOpenAccordionItems([categoryKey, subcategoryKey]);
+    } else if (!searchTerm) {
       setOpenAccordionItems([]);
     }
 
     const grouped = filtered.reduce((acc, product) => {
       const category = product.kategoria;
       const subcategory = product.podkategoria || 'Bez podkategorii'; 
-      if (!acc[category]) {
-        acc[category] = {};
-      }
-      if (!acc[category][subcategory]) {
-        acc[category][subcategory] = [];
-      }
+      if (!acc[category]) acc[category] = {};
+      if (!acc[category][subcategory]) acc[category][subcategory] = [];
       acc[category][subcategory].push(product);
       return acc;
     }, {});
@@ -79,14 +110,21 @@ export default function Dashboard() {
           <CardTitle className="text-2xl">Aktualny Stan Magazynu</CardTitle>
           <div className="flex w-full md:w-auto gap-2">
             <Input
-              placeholder="Szukaj produktu..."
+              placeholder="Szukaj lub skanuj..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-sm"
             />
+            {/* PRZYWRÓCONY PRZYCISK SKANERA */}
+            <Button variant="secondary" onClick={() => setIsScannerOpen(prev => !prev)}>
+              {isScannerOpen ? "Zamknij Skaner" : "Skanuj QR"}
+            </Button>
           </div>
         </CardHeader>
         <CardContent>
+          {/* KONTENER DLA WIDOKU SKANERA */}
+          {isScannerOpen && <div id={qrcodeRegionId} className="w-full my-4"></div>}
+          
           {loading ? (
             <p className="text-center py-10">Ładowanie...</p>
           ) : Object.keys(groupedAndFilteredProducts).length > 0 ? (
