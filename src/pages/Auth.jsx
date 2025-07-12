@@ -12,20 +12,46 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const { toast } = useToast()
 
-  const handleLogin = async (event) => { /* ... bez zmian ... */ }
+  // Funkcja do obsługi logowania przez e-mail i hasło
+  const handleLogin = async (event) => {
+    event.preventDefault()
+    setLoading(true)
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email,
+      password: password,
+    })
 
+    if (error) {
+      toast({
+        title: "Błąd logowania",
+        description: "Nieprawidłowy e-mail lub hasło.",
+        variant: "destructive",
+      })
+    }
+    // Jeśli sukces, App.jsx automatycznie obsłuży zmianę sesji
+    setLoading(false)
+  }
+
+  // Funkcja do obsługi resetowania hasła
   const handlePasswordReset = async (e) => {
     e.preventDefault();
-    if (!email) { /* ... bez zmian ... */ return; }
+    if (!email) {
+      toast({
+        title: "Brak adresu e-mail",
+        description: "Najpierw wpisz swój adres e-mail w polu powyżej, a potem kliknij ten link.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setLoading(true);
-    
-    // ========================================================================
-    // OSTATECZNA POPRAWKA: Przekierowujemy na stronę główną, Supabase doda swój hash
-    // ========================================================================
+    // redirectTo mówi Supabase, gdzie przekierować użytkownika po kliknięciu linka w mailu.
+    // Musimy stworzyć tę podstronę, żeby mógł ustawić nowe hasło.
+    const redirectTo = `${window.location.origin}/update-password`;
+
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/`,
+      redirectTo,
     });
-    // ========================================================================
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" });
@@ -46,16 +72,40 @@ export default function Auth() {
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                placeholder="twoj@email.com"
+                value={email}
+                required={true}
+                onChange={(e) => setEmail(e.target.value)}
+                className="text-base"
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Hasło</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                required={true}
+                onChange={(e) => setPassword(e.target.value)}
+                className="text-base"
+              />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Logowanie...' : 'Zaloguj się'}</Button>
+            <div>
+              <Button type="submit" className="w-full text-base" disabled={loading}>
+                {loading ? <span>Logowanie...</span> : <span>Zaloguj się</span>}
+              </Button>
+            </div>
             <div className="text-center text-sm">
-              <button type="button" onClick={handlePasswordReset} className="underline text-muted-foreground hover:text-primary">
-                Nie pamiętasz hasła? Ustaw nowe.
+              <button
+                type="button" // Ważne, żeby nie wysyłał formularza
+                onClick={handlePasswordReset}
+                className="underline text-muted-foreground hover:text-primary transition-colors"
+              >
+                Zapomniałeś hasła lub ustaw nowe
               </button>
             </div>
           </form>
