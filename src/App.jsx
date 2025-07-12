@@ -1,19 +1,13 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Link, useNavigate } from 'react-router-dom'
+import { Routes, Route, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
-import { Menu } from 'lucide-react'
 
-// Komponenty UI
-import { Button } from '@/components/ui/button'
+// Importy UI i Layoutu
 import { Toaster } from '@/components/ui/toaster'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import MainLayout from './layouts/MainLayout'
 
-// Strony
+// Importy Stron
 import Auth from './pages/Auth'
-import Dashboard from './pages/Dashboard'
-import AddProduct from './pages/AddProduct'
-import ZmienStan from './pages/ZmienStan'
-import EditProduct from './pages/EditProduct'
 import UpdatePassword from './pages/UpdatePassword'
 
 function App() {
@@ -22,87 +16,50 @@ function App() {
   const navigate = useNavigate()
 
   useEffect(() => {
+    // Sprawdź sesję przy pierwszym załadowaniu
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
-    });
+    })
 
+    // Ustaw nasłuchiwanie na zmiany stanu
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
-    });
+    })
 
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
+    return () => subscription.unsubscribe()
+  }, [])
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    navigate('/login', { replace: true });
-  };
+  // Przekieruj na /update-password, jeśli w URL jest 'type=recovery'
+  // To jest kluczowa logika, która musi być w App.jsx
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash.includes('type=recovery')) {
+      navigate('/update-password', { replace: true })
+    }
+  }, [navigate])
 
   if (loading) {
-    return (
-      <div className="dark min-h-screen flex items-center justify-center">
-        <Toaster /> {/* Dodajemy Toaster też na ekranie ładowania */}
-        <p>Ładowanie...</p>
-      </div>
-    )
+    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
   }
 
   return (
-    // Główny div, który zawsze renderuje Toaster na samym końcu
     <div className="dark min-h-screen bg-background text-foreground">
       <Routes>
         {session ? (
-          // --- ŚCIEŻKI DLA ZALOGOWANEGO UŻYTKOWNIKA ---
-          <Route path="/*" element={
-            <>
-              <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-                <div className="container mx-auto flex h-16 items-center justify-between">
-                  <Link to="/" className="text-xl font-bold">Magazyn</Link>
-                  <nav className="hidden md:flex items-center gap-4">
-                    <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
-                    <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
-                    <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
-                    <Button onClick={handleLogout} variant="secondary">Wyloguj</Button>
-                  </nav>
-                  <div className="md:hidden">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild><Button variant="outline" size="icon"><Menu className="h-4 w-4" /></Button></DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link to="/zmien-stan">Zmień Stan</Link></DropdownMenuItem>
-                        <DropdownMenuItem asChild><Link to="/dodaj-produkt">Nowy Produkt</Link></DropdownMenuItem>
-                        <DropdownMenuItem onClick={handleLogout}>Wyloguj</DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              </header>
-              <main className="container mx-auto p-4 md:p-8">
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/dodaj-produkt" element={<AddProduct />} />
-                  <Route path="/zmien-stan" element={<ZmienStan />} />
-                  <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-                  <Route path="/update-password" element={<UpdatePassword />} />
-                  <Route path="*" element={<Dashboard />} />
-                </Routes>
-              </main>
-            </>
-          } />
+          // Jeśli jest sesja, renderuj główny layout
+          <Route path="/*" element={<MainLayout />} />
         ) : (
-          // --- ŚCIEŻKI DLA NIEZALOGOWANEGO UŻYTKOWNIKA ---
+          // Jeśli nie ma sesji, renderuj tylko strony publiczne
           <>
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="*" element={<Auth />} />
           </>
         )}
       </Routes>
-      <Toaster /> {/* <<< TOASTER JEST TERAZ NA ZEWNĄTRZ WARUNKU `if (session)` */}
+      <Toaster />
     </div>
-  );
+  )
 }
 
 export default App

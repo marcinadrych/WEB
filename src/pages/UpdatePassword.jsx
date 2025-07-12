@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,19 +11,34 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const navigate = useNavigate()
   const { toast } = useToast()
+
+  // Ten useEffect jest kluczowy. Uruchamia się tylko raz.
+  useEffect(() => {
+    // Nasłuchujemy na event PASSWORD_RECOVERY, który jest wysyłany
+    // tylko wtedy, gdy użytkownik trafia tu z linka w mailu.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === "PASSWORD_RECOVERY") {
+        // Pozwalamy użytkownikowi pozostać na tej stronie.
+        // Supabase automatycznie utworzył dla niego sesję.
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleUpdatePassword = async (event) => {
     event.preventDefault()
-
     if (password.length < 6) {
-      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" })
-      return
+      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" });
+      return;
     }
-
     if (password !== confirmPassword) {
-      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" })
-      return
+      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" });
+      return;
     }
 
     setLoading(true)
@@ -32,11 +48,11 @@ export default function UpdatePassword() {
       toast({ title: "Błąd", description: error.message, variant: "destructive" })
       setLoading(false)
     } else {
-      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania." })
-      
-      // Proste i niezawodne przekierowanie po 2 sekundach
-      setTimeout(() => {
-        window.location.href = "/login";
+      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Przekierowuję do logowania..." });
+      // Wylogowujemy użytkownika i przekierowujemy go na stronę logowania
+      setTimeout(async () => {
+        await supabase.auth.signOut();
+        navigate("/login", { replace: true });
       }, 2000);
     }
   }
@@ -52,31 +68,13 @@ export default function UpdatePassword() {
           <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="password">Nowe hasło (min. 6 znaków)</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Potwierdź nowe hasło</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                required
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full text-base" disabled={loading}>
-              {loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}</Button>
           </form>
         </CardContent>
       </Card>
