@@ -1,7 +1,6 @@
 // src/pages/UpdatePassword.jsx
 
-import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useState } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,36 +12,35 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const navigate = useNavigate()
   const { toast } = useToast()
-
-  // Ten useEffect nasłuchuje na specjalny event, który Supabase wysyła
-  // po udanym zalogowaniu przez link do resetu hasła.
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'PASSWORD_RECOVERY') {
-        // Nic nie rób, po prostu pozwól użytkownikowi być na tej stronie
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, []);
 
   const handleUpdatePassword = async (event) => {
     event.preventDefault()
-    if (password.length < 6) { /* ... walidacja ... */ return }
-    if (password !== confirmPassword) { /* ... walidacja ... */ return }
+
+    if (password.length < 6) {
+      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" })
+      return
+    }
+
+    if (password !== confirmPassword) {
+      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" })
+      return
+    }
 
     setLoading(true)
     const { error } = await supabase.auth.updateUser({ password: password })
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" })
+      setLoading(false)
     } else {
-      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Możesz się teraz zalogować." })
-      await supabase.auth.signOut(); // Wyloguj użytkownika po zmianie hasła
-      navigate('/login') // Przekieruj na stronę logowania
+      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania." })
+      
+      // KLUCZOWA ZMIANA: Zamiast navigate, robimy twarde przeładowanie
+      setTimeout(() => {
+        window.location.href = "/login"; // To jest niezawodny sposób na przekierowanie
+      }, 2000); // Czekamy 2 sekundy, żeby użytkownik zdążył przeczytać toasta
     }
-    setLoading(false)
   }
 
   return (
