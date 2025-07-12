@@ -35,11 +35,7 @@ function App() {
   }, [])
 
   // Sprawdzamy, czy w adresie URL jest fragment od resetu hasła
- const isPasswordRecovery = location.pathname === '/update-password'
-
-if (loading && !isPasswordRecovery) {
-  return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
-}
+const isPasswordRecovery = location.pathname === '/update-password'
 
 if (isPasswordRecovery) {
   return (
@@ -49,6 +45,12 @@ if (isPasswordRecovery) {
     </div>
   )
 }
+
+if (loading) {
+  return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
+}
+
+
 
 
   // Jeśli nie resetujemy hasła, to sprawdzamy, czy jest sesja.
