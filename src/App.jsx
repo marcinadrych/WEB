@@ -22,91 +22,92 @@ function App() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Nasłuchujemy na zmiany stanu autentykacji
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Niezależnie od eventu, zawsze aktualizujemy sesję
-      setSession(session);
-      setLoading(false);
-      
-      // Jeśli event to PASSWORD_RECOVERY, to znaczy, że użytkownik kliknął link
-      // z maila i Supabase dał mu tymczasową sesję. Przekierowujemy go ręcznie.
-      if (event === "PASSWORD_RECOVERY") {
-        navigate("/update-password");
-      }
-    });
-
-    // Sprawdzamy też sesję przy pierwszym załadowaniu, na wypadek gdyby użytkownik już był zalogowany
+    // Sprawdzamy sesję przy pierwszym załadowaniu
     supabase.auth.getSession().then(({ data: { session } }) => {
-        if (!session) {
-            // Jeśli nie ma sesji, a nie jesteśmy na stronie update-password, to idziemy do logowania
-            if (window.location.pathname !== '/update-password') {
-                navigate('/login');
-            }
-        }
-        setSession(session)
-        setLoading(false)
+      setSession(session)
+      setLoading(false)
     })
 
+    // Ustawiamy nasłuchiwanie na zmiany stanu autentykacji
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      // Jeśli sesja się zmieni (np. ktoś się wyloguje), zaktualizuj stan
+      setSession(session)
+    })
+
+    // Zakończ nasłuchiwanie, gdy komponent zostanie "odmontowany"
     return () => {
-      subscription.unsubscribe();
-    };
-  }, [navigate]);
+      subscription.unsubscribe()
+    }
+  }, [])
 
-  // Ekran ładowania, dopóki nie ustalimy, czy jest sesja
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
+    // Po wylogowaniu React automatycznie przerenderuje komponent,
+    // a warunek `session ? ... : ...` pokaże stronę logowania.
+    // Możemy dodać navigate dla pewności.
+    navigate('/login', { replace: true })
+  }
+
+  // Pokaż ekran ładowania, dopóki nie sprawdzimy, czy jest sesja
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>;
+    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
   }
 
-  // Jeśli nie ma sesji, pokazujemy tylko strony publiczne
-  if (!session) {
-    return (
-      <div className="min-h-screen bg-background text-foreground">
-        <Routes>
-          <Route path="/update-password" element={<UpdatePassword />} />
-          <Route path="*" element={<Auth />} />
-        </Routes>
-        <Toaster />
-      </div>
-    );
-  }
-
-  // Jeśli jest sesja, pokazujemy główną aplikację
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
-        <div className="container mx-auto flex h-16 items-center justify-between">
-          <Link to="/" className="text-xl font-bold">Magazyn</Link>
-          <nav className="hidden md:flex items-center gap-4">
-            <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
-            <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
-            <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
-            <Button onClick={() => supabase.auth.signOut()} variant="secondary">Wyloguj</Button>
-          </nav>
-          <div className="md:hidden">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild><Button variant="outline" size="icon"><Menu className="h-4 w-4" /></Button></DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/zmien-stan">Zmień Stan</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/dodaj-produkt">Nowy Produkt</Link></DropdownMenuItem>
-                <DropdownMenuItem onClick={() => supabase.auth.signOut()}>Wyloguj</DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-      </header>
-      <main className="container mx-auto p-4 md:p-8">
-        <Routes>
-          <Route path="/" element={<Dashboard />} />
-          <Route path="/dodaj-produkt" element={<AddProduct />} />
-          <Route path="/zmien-stan" element={<ZmienStan />} />
-          <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          <Route path="*" element={<Dashboard />} />
-        </Routes>
-      </main>
+    <div className="dark min-h-screen bg-background text-foreground">
+      <Routes>
+        {session ? (
+          // --- ŚCIEŻKI DLA ZALOGOWANEGO UŻYTKOWNIKA ---
+          // Używamy "catch-all" (/*), żeby objąć wszystkie ścieżki po zalogowaniu
+          <Route path="/*" element={
+            <>
+              <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
+                <div className="container mx-auto flex h-16 items-center justify-between">
+                  <Link to="/" className="text-xl font-bold">Magazyn</Link>
+                  <nav className="hidden md:flex items-center gap-4">
+                    <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
+                    <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
+                    <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
+                    <Button onClick={handleLogout} variant="secondary">Wyloguj</Button>
+                  </nav>
+                  <div className="md:hidden">
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild><Button variant="outline" size="icon"><Menu className="h-4 w-4" /></Button></DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to="/zmien-stan">Zmień Stan</Link></DropdownMenuItem>
+                        <DropdownMenuItem asChild><Link to="/dodaj-produkt">Nowy Produkt</Link></DropdownMenuItem>
+                        <DropdownMenuItem onClick={handleLogout}>Wyloguj</DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              </header>
+              <main className="container mx-auto p-4 md:p-8">
+                {/* Zagnieżdżony router dla podstron po zalogowaniu */}
+                <Routes>
+                  <Route path="/" element={<Dashboard />} />
+                  <Route path="/dodaj-produkt" element={<AddProduct />} />
+                  <Route path="/zmien-stan" element={<ZmienStan />} />
+                  <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
+                  {/* Ta ścieżka jest teraz częścią chronionych, co jest OK */}
+                  <Route path="/update-password" element={<UpdatePassword />} />
+                  <Route path="*" element={<Dashboard />} />
+                </Routes>
+              </main>
+            </>
+          } />
+        ) : (
+          // --- ŚCIEŻKI DLA NIEZALOGOWANEGO UŻYTKOWNIKA ---
+          <>
+            <Route path="/update-password" element={<UpdatePassword />} />
+            <Route path="*" element={<Auth />} />
+          </>
+        )}
+      </Routes>
       <Toaster />
     </div>
-  );
+  )
 }
 
-export default App;
+export default App
