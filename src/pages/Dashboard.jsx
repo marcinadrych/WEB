@@ -1,10 +1,11 @@
-// src/pages/Dashboard.jsx - Wersja z grupowaniem po KATEGORIACH i PODKATEGORIACH
+// src/pages/Dashboard.jsx - POPRAWIONA WERSJA Z KOMPLETNYMI IMPORTAMI
 
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Accordion } from "@/components/ui/accordion"
+// --- TO JEST KLUCZOWA POPRAWKA ---
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import ProductListItem from '@/components/ProductListItem'
 
 export default function Dashboard() {
@@ -18,7 +19,6 @@ export default function Dashboard() {
 
   async function getProducts() {
     setLoading(true);
-    // Sortujemy po kategorii, potem podkategorii, potem nazwie
     const { data, error } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
     if (error) {
       console.error("Błąd pobierania produktów:", error);
@@ -28,9 +28,7 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  // Używamy useMemo do zaawansowanego filtrowania i grupowania
   const groupedAndFilteredProducts = useMemo(() => {
-    // 1. Filtrujemy produkty
     const filtered = products.filter(product => {
       const searchTermLower = searchTerm.toLowerCase();
       const podkategoria = product.podkategoria || '';
@@ -42,27 +40,22 @@ export default function Dashboard() {
       );
     });
 
-    // 2. Grupujemy dwupoziomowo
     const grouped = filtered.reduce((acc, product) => {
       const category = product.kategoria;
-      // Używamy 'Bez podkategorii' jako klucza, jeśli podkategoria jest pusta
       const subcategory = product.podkategoria || 'Bez podkategorii'; 
-      
-      // Inicjalizujemy kategorię, jeśli nie istnieje
       if (!acc[category]) {
         acc[category] = {};
       }
-      // Inicjalizujemy podkategorię wewnątrz kategorii, jeśli nie istnieje
       if (!acc[category][subcategory]) {
         acc[category][subcategory] = [];
       }
-      
       acc[category][subcategory].push(product);
       return acc;
     }, {});
 
     return grouped;
   }, [products, searchTerm]);
+
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,7 +75,6 @@ export default function Dashboard() {
           {loading ? (
             <p className="text-center py-10">Ładowanie...</p>
           ) : Object.keys(groupedAndFilteredProducts).length > 0 ? (
-            // Poziom 1: Akordeon dla KATEGORII
             <Accordion type="multiple" className="w-full">
               {Object.entries(groupedAndFilteredProducts).map(([category, subcategories]) => (
                 <AccordionItem value={`category-${category}`} key={category}>
@@ -90,7 +82,6 @@ export default function Dashboard() {
                     {category}
                   </AccordionTrigger>
                   <AccordionContent className="p-0 pl-4 border-l">
-                    {/* Poziom 2: Akordeon dla PODKATEGORII */}
                     <Accordion type="multiple" className="w-full">
                       {Object.entries(subcategories).map(([subcategory, productsInCategory]) => (
                         <AccordionItem value={`subcategory-${subcategory}`} key={subcategory}>
@@ -98,7 +89,6 @@ export default function Dashboard() {
                             {subcategory}
                           </AccordionTrigger>
                           <AccordionContent className="p-0 pl-4 border-l">
-                            {/* Poziom 3: Akordeon dla PRODUKTÓW */}
                             <Accordion type="single" collapsible className="w-full">
                               {productsInCategory.map((product) => (
                                 <ProductListItem key={product.id} product={product} />
