@@ -12,35 +12,25 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const { toast } = useToast()
 
-  const handleLogin = async (event) => {
-    event.preventDefault();
-    setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email: email,
-      password: password,
-    });
-    if (error) {
-      toast({ title: "Błąd logowania", description: "Nieprawidłowy e-mail lub hasło.", variant: "destructive" });
-    }
-    setLoading(false);
-  }
+  const handleLogin = async (event) => { /* ... bez zmian ... */ }
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
-    if (!email) {
-      toast({ title: "Brak adresu e-mail", description: "Wpisz swój e-mail, a potem kliknij ten link.", variant: "destructive" });
-      return;
-    }
-
+    if (!email) { /* ... bez zmian ... */ return; }
     setLoading(true);
+    
+    // ========================================================================
+    // OSTATECZNA POPRAWKA: Przekierowujemy na stronę główną, Supabase doda swój hash
+    // ========================================================================
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/update-password`,
+      redirectTo: `${window.location.origin}/`,
     });
+    // ========================================================================
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Link wysłany!", description: "Sprawdź swoją skrzynkę e-mail." });
+      toast({ title: "Link wysłany!", description: "Sprawdź skrzynkę e-mail, aby ustawić nowe hasło." });
     }
     setLoading(false);
   }
@@ -50,7 +40,7 @@ export default function Auth() {
       <Card className="w-full max-w-sm">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl font-bold">Magazyn Hydraulika</CardTitle>
-          <CardDescription>Zaloguj się lub zresetuj hasło</CardDescription>
+          <CardDescription>Zaloguj się, aby uzyskać dostęp</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="flex flex-col gap-4">

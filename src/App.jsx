@@ -15,39 +15,42 @@ import UpdatePassword from './pages/UpdatePassword'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
+  const navigate = useNavigate()
+  const location = useLocation()
 
   useEffect(() => {
-    // Sprawdzamy sesję tylko raz
+    // Sprawdzamy sesję tylko raz na początku
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
     })
 
-    // Nasłuchujemy na przyszłe zmiany
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    // Ustawiamy nasłuchiwanie na zmiany
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Jeśli event to odzyskiwanie hasła, przekieruj na stronę zmiany hasła
+      if (event === "PASSWORD_RECOVERY") {
+        navigate("/update-password", { replace: true });
+      }
       setSession(session)
     })
 
     return () => subscription.unsubscribe()
-  }, [])
+  }, [navigate])
+
 
   if (loading) {
     return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
   }
 
-  // Używamy prostego routingu, który sam decyduje, co pokazać
   return (
     <div className="dark min-h-screen bg-background text-foreground">
       <Routes>
-        {/* Jeśli jest sesja, główną ścieżką jest MainApp */}
         {session ? (
+          // --- ŚCIEŻKI DLA ZALOGOWANEGO UŻYTKOWNIKA ---
           <Route path="/*" element={<MainApp />} />
         ) : (
-          // Jeśli nie ma sesji, mamy tylko dwie publiczne ścieżki
-          <>
-            <Route path="/update-password" element={<UpdatePassword />} />
-            <Route path="*" element={<Auth />} />
-          </>
+          // --- ŚCIEŻKI DLA NIEZALOGOWANEGO UŻYTKOWNIKA ---
+          <Route path="*" element={<Auth />} />
         )}
       </Routes>
       <Toaster />
@@ -56,13 +59,6 @@ function App() {
 }
 
 function MainApp() {
-  const navigate = useNavigate()
-  const handleLogout = () => {
-    supabase.auth.signOut().then(() => {
-      navigate('/login', { replace: true })
-    })
-  }
-
   return (
     <>
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -72,7 +68,7 @@ function MainApp() {
             <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
             <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
             <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
-            <Button onClick={handleLogout} variant="secondary">Wyloguj</Button>
+            <Button onClick={() => supabase.auth.signOut()} variant="secondary">Wyloguj</Button>
           </nav>
           <div className="md:hidden">
             <DropdownMenu>
@@ -81,7 +77,7 @@ function MainApp() {
                 <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/zmien-stan">Zmień Stan</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/dodaj-produkt">Nowy Produkt</Link></DropdownMenuItem>
-                <DropdownMenuItem onClick={handleLogout}>Wyloguj</DropdownMenuItem>
+                <DropdownMenuItem onClick={() => supabase.auth.signOut()}>Wyloguj</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -93,6 +89,8 @@ function MainApp() {
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
+          {/* Strona zmiany hasła jest teraz tutaj */}
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
