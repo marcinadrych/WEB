@@ -10,42 +10,53 @@ export default function Auth() {
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { toast } = useToast()
+  const { toast } = useToast() // Inicjalizujemy hook do toastów
 
   const handleLogin = async (event) => {
-    event.preventDefault();
-    setLoading(true);
+    event.preventDefault()
+    setLoading(true)
     const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
-    });
+    })
+
     if (error) {
-      toast({ title: "Błąd logowania", description: "Nieprawidłowy e-mail lub hasło.", variant: "destructive" });
+      toast({
+        title: "Błąd logowania",
+        description: "Nieprawidłowy e-mail lub hasło.",
+        variant: "destructive",
+      })
     }
-    setLoading(false);
+    setLoading(false)
   }
 
   const handlePasswordReset = async (e) => {
     e.preventDefault();
     if (!email) {
-      toast({ title: "Brak adresu e-mail", description: "Wpisz swój adres e-mail, a potem kliknij ten link.", variant: "destructive" });
+      toast({
+        title: "Brak adresu e-mail",
+        description: "Najpierw wpisz swój adres e-mail w polu powyżej, a potem kliknij ten link.",
+        variant: "destructive",
+      });
       return;
     }
 
     setLoading(true);
-    // KLUCZOWA ZMIANA: Mówimy Supabase, gdzie ma przekierować użytkownika
     const redirectTo = `${window.location.origin}/update-password`;
 
+    // Wywołujemy funkcję resetowania hasła z Supabase
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo,
     });
 
+    setLoading(false); // Zatrzymujemy ładowanie niezależnie od wyniku
+
+    // Wyświetlamy powiadomienie na podstawie wyniku
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" });
     } else {
-      toast({ title: "Link wysłany!", description: "Sprawdź skrzynkę e-mail, aby ustawić nowe hasło." });
+      toast({ title: "Link wysłany!", description: "Sprawdź swoją skrzynkę e-mail, aby ustawić nowe hasło." });
     }
-    setLoading(false);
   }
 
   return (
@@ -59,16 +70,41 @@ export default function Auth() {
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
+              <Input
+                id="email"
+                type="email"
+                placeholder="twoj@email.com"
+                value={email}
+                required={true}
+                onChange={(e) => setEmail(e.target.value)}
+                className="text-base"
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Hasło</Label>
-              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
+              <Input
+                id="password"
+                type="password"
+                placeholder="••••••••"
+                value={password}
+                required={true}
+                onChange={(e) => setPassword(e.target.value)}
+                className="text-base"
+              />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Logowanie...' : 'Zaloguj się'}</Button>
+            <div>
+              <Button type="submit" className="w-full text-base" disabled={loading}>
+                {loading ? <span>Logowanie...</span> : <span>Zaloguj się</span>}
+              </Button>
+            </div>
             <div className="text-center text-sm">
-              <button type="button" onClick={handlePasswordReset} className="underline text-muted-foreground hover:text-primary">
-                Nie pamiętasz hasła? Ustaw nowe.
+              <button
+                type="button"
+                onClick={handlePasswordReset}
+                disabled={loading} // Wyłączamy przycisk podczas wysyłania
+                className="underline text-muted-foreground hover:text-primary transition-colors disabled:opacity-50"
+              >
+                {loading ? 'Wysyłanie...' : 'Nie pamiętasz hasła? Ustaw nowe.'}
               </button>
             </div>
           </form>
