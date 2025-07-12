@@ -1,9 +1,10 @@
+// src/pages/Dashboard.jsx - Wersja z grupowaniem po KATEGORIACH i PODKATEGORIACH
+
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-// --- POPRAWIONY IMPORT ---
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Accordion } from "@/components/ui/accordion"
 import ProductListItem from '@/components/ProductListItem'
 
 export default function Dashboard() {
@@ -17,7 +18,8 @@ export default function Dashboard() {
 
   async function getProducts() {
     setLoading(true);
-    const { data, error } = await supabase.from('produkty').select('*').order('kategoria').order('nazwa');
+    // Sortujemy po kategorii, potem podkategorii, potem nazwie
+    const { data, error } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
     if (error) {
       console.error("Błąd pobierania produktów:", error);
     } else {
@@ -26,7 +28,9 @@ export default function Dashboard() {
     setLoading(false);
   }
 
+  // Używamy useMemo do zaawansowanego filtrowania i grupowania
   const groupedAndFilteredProducts = useMemo(() => {
+    // 1. Filtrujemy produkty
     const filtered = products.filter(product => {
       const searchTermLower = searchTerm.toLowerCase();
       const podkategoria = product.podkategoria || '';
@@ -38,12 +42,22 @@ export default function Dashboard() {
       );
     });
 
+    // 2. Grupujemy dwupoziomowo
     const grouped = filtered.reduce((acc, product) => {
       const category = product.kategoria;
+      // Używamy 'Bez podkategorii' jako klucza, jeśli podkategoria jest pusta
+      const subcategory = product.podkategoria || 'Bez podkategorii'; 
+      
+      // Inicjalizujemy kategorię, jeśli nie istnieje
       if (!acc[category]) {
-        acc[category] = [];
+        acc[category] = {};
       }
-      acc[category].push(product);
+      // Inicjalizujemy podkategorię wewnątrz kategorii, jeśli nie istnieje
+      if (!acc[category][subcategory]) {
+        acc[category][subcategory] = [];
+      }
+      
+      acc[category][subcategory].push(product);
       return acc;
     }, {});
 
@@ -68,18 +82,30 @@ export default function Dashboard() {
           {loading ? (
             <p className="text-center py-10">Ładowanie...</p>
           ) : Object.keys(groupedAndFilteredProducts).length > 0 ? (
-            // Zewnętrzny akordeon dla KATEGORII
+            // Poziom 1: Akordeon dla KATEGORII
             <Accordion type="multiple" className="w-full">
-              {Object.entries(groupedAndFilteredProducts).map(([category, productsInCategory]) => (
+              {Object.entries(groupedAndFilteredProducts).map(([category, subcategories]) => (
                 <AccordionItem value={`category-${category}`} key={category}>
                   <AccordionTrigger className="text-xl font-semibold p-4 hover:no-underline">
                     {category}
                   </AccordionTrigger>
                   <AccordionContent className="p-0 pl-4 border-l">
-                    {/* Wewnętrzny akordeon dla PRODUKTÓW */}
-                    <Accordion type="single" collapsible className="w-full">
-                      {productsInCategory.map((product) => (
-                        <ProductListItem key={product.id} product={product} />
+                    {/* Poziom 2: Akordeon dla PODKATEGORII */}
+                    <Accordion type="multiple" className="w-full">
+                      {Object.entries(subcategories).map(([subcategory, productsInCategory]) => (
+                        <AccordionItem value={`subcategory-${subcategory}`} key={subcategory}>
+                          <AccordionTrigger className="text-lg font-medium p-3 hover:no-underline">
+                            {subcategory}
+                          </AccordionTrigger>
+                          <AccordionContent className="p-0 pl-4 border-l">
+                            {/* Poziom 3: Akordeon dla PRODUKTÓW */}
+                            <Accordion type="single" collapsible className="w-full">
+                              {productsInCategory.map((product) => (
+                                <ProductListItem key={product.id} product={product} />
+                              ))}
+                            </Accordion>
+                          </AccordionContent>
+                        </AccordionItem>
                       ))}
                     </Accordion>
                   </AccordionContent>
