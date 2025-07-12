@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { Menu } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/toaster'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-
 import Auth from './pages/Auth'
 import Dashboard from './pages/Dashboard'
 import AddProduct from './pages/AddProduct'
@@ -16,60 +15,46 @@ import UpdatePassword from './pages/UpdatePassword'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const location = useLocation()
 
   useEffect(() => {
-    // Nasłuchujemy na zmiany stanu autentykacji
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setLoading(false)
-    })
-
-    // Sprawdzamy początkową sesję
+    // Sprawdzamy sesję tylko raz na początku
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
     })
 
+    // Nasłuchujemy na przyszłe zmiany (logowanie, wylogowanie)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session)
+    })
+
     return () => subscription.unsubscribe()
   }, [])
 
-  // Sprawdzamy, czy w adresie URL jest fragment od resetu hasła
-const isPasswordRecovery = location.pathname === '/update-password'
-
-if (isPasswordRecovery) {
-  return (
-    <div className="dark min-h-screen bg-background text-foreground">
-      <UpdatePassword />
-      <Toaster />
-    </div>
-  )
-}
-
-if (loading) {
-  return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
-}
-
-
-
-
-  // Jeśli nie resetujemy hasła, to sprawdzamy, czy jest sesja.
-  // Jeśli jest, pokazujemy główną aplikację.
-  if (session) {
-    return <MainApp />
+  if (loading) {
+    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
   }
 
-  // W każdym innym przypadku (brak sesji, brak resetu hasła),
-  // pokazujemy stronę logowania.
   return (
     <div className="dark min-h-screen bg-background text-foreground">
-      <Auth />
+      <Routes>
+        {session ? (
+          // --- ŚCIEŻKI DLA ZALOGOWANEGO UŻYTKOWNIKA ---
+          <Route path="/*" element={<MainApp />} />
+        ) : (
+          // --- ŚCIEŻKI DLA NIEZALOGOWANEGO UŻYTKOWNIKA ---
+          <>
+            <Route path="/update-password" element={<UpdatePassword />} />
+            <Route path="*" element={<Auth />} />
+          </>
+        )}
+      </Routes>
       <Toaster />
     </div>
   )
 }
 
-// Wydzielamy główną aplikację do osobnego komponentu dla czystości
+// Komponent dla głównej części aplikacji po zalogowaniu
 function MainApp() {
   const navigate = useNavigate();
   const handleLogout = () => {
@@ -108,7 +93,7 @@ function MainApp() {
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          {/* Jeśli zalogowany użytkownik jest na stronie /update-password, też mu ją pokażemy */}
+          {/* Strona zmiany hasła jest też tutaj, na wypadek gdyby zalogowany użytkownik chciał zmienić hasło */}
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
@@ -117,4 +102,4 @@ function MainApp() {
   )
 }
 
-export default App
+export default App;

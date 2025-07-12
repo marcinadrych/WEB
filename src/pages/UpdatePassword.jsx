@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,52 +11,48 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const navigate = useNavigate()
   const { toast } = useToast()
-  const location = useLocation()
 
-  // 🔐 Odczytaj tokeny z URL-a (query lub hash) i ustaw sesję Supabase
+  // Ten useEffect nasłuchuje na specjalny event, który Supabase wysyła,
+  // gdy użytkownik trafia tu z linka w mailu. To jest kluczowy brakujący element.
   useEffect(() => {
-    const searchParams = new URLSearchParams(location.search)
-    const hashParams = new URLSearchParams(location.hash.replace('#', ''))
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "PASSWORD_RECOVERY") {
+        // To zdarzenie potwierdza, że mamy tymczasową sesję do zmiany hasła.
+        // Nie musimy nic robić, po prostu pozwalamy użytkownikowi być na tej stronie.
+      }
+    });
 
-    const access_token = searchParams.get('access_token') || hashParams.get('access_token')
-    const refresh_token = searchParams.get('refresh_token') || hashParams.get('refresh_token')
-
-    if (access_token && refresh_token) {
-      supabase.auth.setSession({ access_token, refresh_token }).catch((error) => {
-        console.error("Błąd ustawiania sesji:", error)
-      })
-    }
-  }, [location])
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const handleUpdatePassword = async (event) => {
     event.preventDefault()
-
     if (password.length < 6) {
-      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" })
-      return
+      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" });
+      return;
     }
-
     if (password !== confirmPassword) {
-      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" })
-      return
+      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" });
+      return;
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password })
+    const { error } = await supabase.auth.updateUser({ password: password })
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" })
       setLoading(false)
     } else {
-      toast({
-        title: "Sukces!",
-        description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania.",
-      })
-
-      setTimeout(() => {
-        window.location.href = "/login"
-      }, 2000)
+      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Przekierowuję do logowania..." });
+      // Wylogowujemy użytkownika i przekierowujemy go na stronę logowania
+      setTimeout(async () => {
+        await supabase.auth.signOut();
+        navigate("/login", { replace: true });
+      }, 2000);
     }
   }
 
@@ -71,31 +67,13 @@ export default function UpdatePassword() {
           <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="password">Nowe hasło (min. 6 znaków)</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Potwierdź nowe hasło</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                required
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full text-base" disabled={loading}>
-              {loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}</Button>
           </form>
         </CardContent>
       </Card>
