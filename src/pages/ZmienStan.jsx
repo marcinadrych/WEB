@@ -1,3 +1,5 @@
+// src/pages/ZmienStan.jsx
+
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
@@ -15,7 +17,7 @@ export default function ZmienStan() {
   
   const [operationType, setOperationType] = useState('zuzycie')
   const [selectedProductId, setSelectedProductId] = useState('')
-  const [quantity, setQuantity] = useState(1)
+  const [quantity, setQuantity] = useState('1') // Zaczynamy jako tekst
   const [notes, setNotes] = useState('')
 
   const navigate = useNavigate()
@@ -36,31 +38,53 @@ export default function ZmienStan() {
 
   async function handleSubmit(event) {
     event.preventDefault()
-    if (!selectedProductId || !quantity) {
-      toast({ title: "Błąd walidacji", description: "Musisz wybrać produkt i podać ilość.", variant: "destructive" })
+    
+    // --- POPRAWIONA WALIDACJA ---
+    const quantityToChange = parseFloat(quantity);
+    if (!selectedProductId || isNaN(quantityToChange) || quantityToChange <= 0) {
+      toast({ title: "Błąd walidacji", description: "Wybierz produkt i podaj poprawną, dodatnią ilość.", variant: "destructive" })
       return
     }
 
     setLoading(true)
     try {
+      // --- POPRAWIONA LOGIKA AKTUALIZACJI ---
       const { data: { session } } = await supabase.auth.getSession()
       if (!session) throw new Error("Użytkownik nie jest zalogowany.")
 
-      await supabase.from('operacje').insert({
+      // Krok 1: Znajdź produkt i jego aktualną ilość
+      const selectedProduct = products.find(p => p.id === parseInt(selectedProductId, 10))
+      if (!selectedProduct) throw new Error("Nie znaleziono wybranego produktu.")
+      const currentQuantity = parseFloat(selectedProduct.ilosc);
+
+      // Krok 2: Oblicz nową ilość
+      const newQuantity = operationType === 'przyjecie' 
+        ? currentQuantity + quantityToChange 
+        : currentQuantity - quantityToChange;
+
+      if (newQuantity < 0) {
+        throw new Error('Stan magazynowy nie może być ujemny.')
+      }
+
+      // Krok 3: Wykonaj obie operacje (aktualizacja i zapis logu) w transakcji
+      // dla bezpieczeństwa, ale na razie zrobimy je po kolei
+      
+      // Zapisz operację do logów
+      const { error: operationError } = await supabase.from('operacje').insert({
         id_produktu: parseInt(selectedProductId, 10),
         typ_operacji: operationType,
-        ilosc_zmieniona: quantity,
+        ilosc_zmieniona: quantityToChange,
         pracownik_email: session.user.email,
         uwagi: notes,
       })
+      if (operationError) throw operationError
 
-      const selectedProduct = products.find(p => p.id === parseInt(selectedProductId, 10))
-      const currentQuantity = selectedProduct.ilosc
-      const newQuantity = operationType === 'przyjecie' ? currentQuantity + quantity : currentQuantity - quantity
-
-      if (newQuantity < 0) throw new Error('Stan magazynowy nie może być ujemny.')
-
-      await supabase.from('produkty').update({ ilosc: newQuantity }).eq('id', parseInt(selectedProductId, 10))
+      // Zaktualizuj stan produktu w tabeli 'produkty'
+      const { error: updateError } = await supabase
+        .from('produkty')
+        .update({ ilosc: newQuantity })
+        .eq('id', parseInt(selectedProductId, 10))
+      if (updateError) throw updateError
 
       toast({ title: "Sukces!", description: "Stan magazynowy został zaktualizowany." })
       navigate('/')
@@ -96,8 +120,8 @@ export default function ZmienStan() {
             </div>
             
             <div className="grid gap-2">
-              <Label htmlFor="quantity">Ilość</Label>
-              <Input id="quantity" type="number" min="0.01" step="0.01" value={quantity} onChange={(e) => setQuantity(parseFloat(e.target.value))} required />
+              <Label htmlFor="quantity">Ilość do {operationType === 'zuzycie' ? 'odjęcia' : 'dodania'}</Label>
+              <Input id="quantity" type="number" min="0.01" step="any" value={quantity} onChange={(e) => setQuantity(e.target.value)} required />
             </div>
 
             <div className="grid gap-2">
