@@ -1,49 +1,47 @@
-import { Routes, Route } from 'react-router-dom'; // <<< TA LINIA BYŁA BRAKUJĄCA!
-import { Toaster } from '@/components/ui/toaster';
-import ProtectedRoute from '@/components/ProtectedRoute';
+// src/App.jsx
 
-// Import stron
-import Auth from './pages/Auth';
-import MainLayout from './layouts/MainLayout';
-import Dashboard from './pages/Dashboard';
-import AddProduct from './pages/AddProduct';
-import ZmienStan from './pages/ZmienStan';
-import EditProduct from './pages/EditProduct';
-import UpdatePassword from './pages/UpdatePassword';
+import { useEffect, useState } from 'react'
+import { Routes, Route, useNavigate } from 'react-router-dom'
+import { supabase } from './supabaseClient'
+import { Toaster } from '@/components/ui/toaster'
+import MainLayout from './layouts/MainLayout'
+import Auth from './pages/Auth'
+import UpdatePassword from './pages/UpdatePassword'
+import Dashboard from './pages/Dashboard'
+// ... inne importy stron
 
-function App() {
+export default function App() {
+  const [session, setSession] = useState(null)
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const getSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setSession(session);
+      setLoading(false);
+    };
+    getSession();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  if (loading) {
+    return <div className="min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
+  }
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <Routes>
-        {/* ================================= */}
-        {/*      ŚCIEŻKI PUBLICZNE          */}
-        {/* ================================= */}
         <Route path="/login" element={<Auth />} />
         <Route path="/update-password" element={<UpdatePassword />} />
         
-        {/* ================================= */}
-        {/*      ŚCIEŻKI CHRONIONE           */}
-        {/* ================================= */}
-        <Route 
-          path="/*" 
-          element={
-            <ProtectedRoute>
-              <MainLayout> 
-                <Routes>
-                  <Route path="/" element={<Dashboard />} />
-                  <Route path="/dodaj-produkt" element={<AddProduct />} />
-                  <Route path="/zmien-stan" element={<ZmienStan />} />
-                  <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-                  <Route path="*" element={<Dashboard />} /> 
-                </Routes>
-              </MainLayout>
-            </ProtectedRoute>
-          } 
-        />
+        <Route path="/*" element={session ? <MainLayout /> : <Auth />} />
       </Routes>
       <Toaster />
     </div>
-  );
+  )
 }
-
-export default App;

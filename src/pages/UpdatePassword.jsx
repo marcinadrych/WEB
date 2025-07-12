@@ -1,3 +1,5 @@
+// src/pages/UpdatePassword.jsx
+
 import { useState } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
@@ -34,10 +36,10 @@ export default function UpdatePassword() {
     } else {
       toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania." })
       
-      // Proste i niezawodne przekierowanie po 2 sekundach
+      // KLUCZOWA ZMIANA: Zamiast navigate, robimy twarde przeładowanie
       setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+        window.location.href = "/login"; // To jest niezawodny sposób na przekierowanie
+      }, 2000); // Czekamy 2 sekundy, żeby użytkownik zdążył przeczytać toasta
     }
   }
 
@@ -52,31 +54,13 @@ export default function UpdatePassword() {
           <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="password">Nowe hasło (min. 6 znaków)</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Potwierdź nowe hasło</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                required
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
-            <Button type="submit" className="w-full text-base" disabled={loading}>
-              {loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}</Button>
           </form>
         </CardContent>
       </Card>
