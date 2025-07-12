@@ -14,16 +14,18 @@ export default function UpdatePassword() {
   const { toast } = useToast()
   const location = useLocation()
 
-  // 🔐 Odczytaj tokeny z hasha URL-a i ustaw sesję Supabase
+  // 🔐 Odczytaj tokeny z URL-a (query lub hash) i ustaw sesję Supabase
   useEffect(() => {
-    const hash = location.hash
-    const params = new URLSearchParams(hash.replace('#', ''))
+    const searchParams = new URLSearchParams(location.search)
+    const hashParams = new URLSearchParams(location.hash.replace('#', ''))
 
-    const access_token = params.get('access_token')
-    const refresh_token = params.get('refresh_token')
+    const access_token = searchParams.get('access_token') || hashParams.get('access_token')
+    const refresh_token = searchParams.get('refresh_token') || hashParams.get('refresh_token')
 
     if (access_token && refresh_token) {
-      supabase.auth.setSession({ access_token, refresh_token })
+      supabase.auth.setSession({ access_token, refresh_token }).catch((error) => {
+        console.error("Błąd ustawiania sesji:", error)
+      })
     }
   }, [location])
 
