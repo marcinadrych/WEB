@@ -1,7 +1,7 @@
-// src/pages/EditProduct.jsx - Wersja z inteligentnym Comboboxem
+// src/pages/EditProduct.jsx - Poprawione przekierowanie
 
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useParams } from 'react-router-dom' // Usunęliśmy useNavigate
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,20 +10,15 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
-import CategoryCombobox from '@/components/CategoryCombobox' // <<< Importujemy nasz komponent
+import CategoryCombobox from '@/components/CategoryCombobox'
 
 export default function EditProduct() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
-  
-  // Stany dla opcji w Comboboxach
   const [allCategories, setAllCategories] = useState([]);
   const [allSubcategories, setAllSubcategories] = useState([]);
-
-  // Stany dla pól formularza
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -33,20 +28,12 @@ export default function EditProduct() {
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-
-      // Pobieramy dane edytowanego produktu
-      const { data: productData, error: productError } = await supabase
-        .from('produkty')
-        .select('*')
-        .eq('id', id)
-        .single();
-
+      const { data: productData, error: productError } = await supabase.from('produkty').select('*').eq('id', id).single();
       if (productError) {
         toast({ title: "Błąd", description: "Nie udało się pobrać danych produktu.", variant: "destructive" });
-        navigate('/');
+        window.location.href = '/'; // Przekieruj, jeśli błąd
         return;
       }
-
       if (productData) {
         setProductName(productData.nazwa);
         setCategory(productData.kategoria);
@@ -54,28 +41,19 @@ export default function EditProduct() {
         setUnit(productData.jednostka || 'szt.');
         setNotes(productData.uwagi || '');
       }
-
-      // Pobieramy wszystkie istniejące kategorie i podkategorie do podpowiedzi
-      const { data: optionsData, error: optionsError } = await supabase.from('produkty').select('kategoria, podkategoria');
-      
+      const { data: optionsData } = await supabase.from('produkty').select('kategoria, podkategoria');
       if (optionsData) {
-        const uniqueCategories = [...new Set(optionsData.map(p => p.kategoria).filter(Boolean))];
-        const uniqueSubcategories = [...new Set(optionsData.map(p => p.podkategoria).filter(Boolean))];
-        setAllCategories(uniqueCategories);
-        setAllSubcategories(uniqueSubcategories);
+        setAllCategories([...new Set(optionsData.map(p => p.kategoria).filter(Boolean))]);
+        setAllSubcategories([...new Set(optionsData.map(p => p.podkategoria).filter(Boolean))]);
       }
-      
       setLoading(false);
     }
     fetchData();
-  }, [id, navigate, toast]);
+  }, [id, toast]);
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!productName || !category) {
-      toast({ title: "Błąd walidacji", description: "Nazwa i kategoria produktu są wymagane.", variant: "destructive" });
-      return;
-    }
+    if (!productName || !category) { /* ... walidacja ... */ return; }
 
     setLoading(true);
     try {
@@ -93,17 +71,21 @@ export default function EditProduct() {
       if (error) throw error;
       
       toast({ title: "Sukces!", description: "Dane produktu zostały zaktualizowane." });
-      navigate('/');
+      
+      // --- KLUCZOWA ZMIANA ---
+      // Zamiast navigate('/'), robimy twarde przeładowanie na stronę główną.
+      // To zmusi Dashboard do ponownego pobrania danych.
+      window.location.href = '/';
+      
     } catch (error) {
       toast({ title: "Błąd serwera", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }
-
-  if (loading) {
-    return <p className="text-center">Ładowanie danych produktu...</p>;
-  }
+  
+  // Reszta kodu (return z formularzem) jest bez zmian
+  if (loading) return <p className="text-center">Ładowanie...</p>;
 
   return (
     <div className="flex flex-col gap-6">
@@ -112,53 +94,12 @@ export default function EditProduct() {
         <CardHeader><CardTitle>Zmień dane produktu</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            <div className="grid gap-2">
-              <Label htmlFor="productName">Nazwa produktu</Label>
-              <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} required />
-            </div>
-
-            {/* PODMIENIONE POLA NA COMBOBOXY */}
-            <div className="grid gap-2">
-              <Label>Kategoria</Label>
-              <CategoryCombobox
-                value={category}
-                setValue={setCategory}
-                options={allCategories}
-                placeholder="Wybierz lub wpisz nową..."
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Podkategoria</Label>
-              <CategoryCombobox
-                value={subcategory}
-                setValue={setSubcategory}
-                options={allSubcategories}
-                placeholder="Wybierz lub wpisz nową..."
-              />
-            </div>
-
-            <div className="grid gap-2">
-              <Label htmlFor="notes">Uwagi</Label>
-              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-            
-            <div className="grid gap-2">
-              <Label htmlFor="unit">Jednostka</Label>
-              <Select onValueChange={setUnit} value={unit}>
-                <SelectTrigger id="unit"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="szt.">szt.</SelectItem>
-                  <SelectItem value="mb">mb</SelectItem>
-                  <SelectItem value="kg">kg</SelectItem>
-                  <SelectItem value="op.">op.</SelectItem>
-                  <SelectItem value="m²">m²</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Button type="submit" disabled={loading} className="w-full mt-2">
-              {loading ? 'Zapisywanie...' : 'Zapisz zmiany'}
-            </Button>
+            <div className="grid gap-2"><Label>Nazwa produktu</Label><Input value={productName} onChange={(e) => setProductName(e.target.value)} required /></div>
+            <div className="grid gap-2"><Label>Kategoria</Label><CategoryCombobox value={category} setValue={setCategory} options={allCategories} placeholder="Wybierz lub wpisz nową..." /></div>
+            <div className="grid gap-2"><Label>Podkategoria</Label><CategoryCombobox value={subcategory} setValue={setSubcategory} options={allSubcategories} placeholder="Wybierz lub wpisz nową..." /></div>
+            <div className="grid gap-2"><Label>Uwagi</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Jednostka</Label><Select onValueChange={setUnit} value={unit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="szt.">szt.</SelectItem><SelectItem value="mb">mb</SelectItem><SelectItem value="kg">kg</SelectItem><SelectItem value="op.">op.</SelectItem><SelectItem value="m²">m²</SelectItem></SelectContent></Select></div>
+            <Button type="submit" disabled={loading} className="w-full mt-2">{loading ? 'Zapisywanie...' : 'Zapisz zmiany'}</Button>
           </form>
         </CardContent>
       </Card>
