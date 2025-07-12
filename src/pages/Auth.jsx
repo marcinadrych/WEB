@@ -12,23 +12,40 @@ export default function Auth() {
   const [password, setPassword] = useState('')
   const { toast } = useToast()
 
-  // Funkcja do obsługi logowania przez e-mail i hasło
   const handleLogin = async (event) => {
-    event.preventDefault()
-    setLoading(true)
+    event.preventDefault();
+    setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: email,
       password: password,
-    })
+    });
+    if (error) {
+      toast({ title: "Błąd logowania", description: "Nieprawidłowy e-mail lub hasło.", variant: "destructive" });
+    }
+    setLoading(false);
+  }
+
+  const handlePasswordReset = async (e) => {
+    e.preventDefault();
+    if (!email) {
+      toast({ title: "Brak adresu e-mail", description: "Wpisz swój adres e-mail, a potem kliknij ten link.", variant: "destructive" });
+      return;
+    }
+
+    setLoading(true);
+    // KLUCZOWA ZMIANA: Mówimy Supabase, gdzie ma przekierować użytkownika
+    const redirectTo = `${window.location.origin}/update-password`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo,
+    });
 
     if (error) {
-      toast({
-        title: "Błąd logowania",
-        description: "Nieprawidłowy e-mail lub hasło.",
-        variant: "destructive",
-      })
+      toast({ title: "Błąd", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Link wysłany!", description: "Sprawdź skrzynkę e-mail, aby ustawić nowe hasło." });
     }
-    setLoading(false)
+    setLoading(false);
   }
 
   return (
@@ -42,32 +59,17 @@ export default function Auth() {
           <form onSubmit={handleLogin} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="email">E-mail</Label>
-              <Input
-                id="email"
-                type="email"
-                placeholder="twoj@email.com"
-                value={email}
-                required={true}
-                onChange={(e) => setEmail(e.target.value)}
-                className="text-base"
-              />
+              <Input id="email" type="email" value={email} onChange={(e) => setEmail(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="password">Hasło</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required={true}
-                onChange={(e) => setPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
-            <div>
-              <Button type="submit" className="w-full text-base" disabled={loading}>
-                {loading ? <span>Logowanie...</span> : <span>Zaloguj się</span>}
-              </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Logowanie...' : 'Zaloguj się'}</Button>
+            <div className="text-center text-sm">
+              <button type="button" onClick={handlePasswordReset} className="underline text-muted-foreground hover:text-primary">
+                Nie pamiętasz hasła? Ustaw nowe.
+              </button>
             </div>
           </form>
         </CardContent>

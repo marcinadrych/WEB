@@ -34,6 +34,10 @@ export default function MainLayout({ children }) {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
+        <Routes>
+        <Route path="/" element={<Dashboard />} />
+        {/* ... reszta ścieżek dla zalogowanych ... */}
+    </Routes>
         {children}
       </main>
     </>
