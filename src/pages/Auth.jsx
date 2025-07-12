@@ -31,33 +31,6 @@ export default function Auth() {
     setLoading(false)
   }
 
-  // Funkcja do obsługi resetowania hasła
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
-    if (!email) {
-      toast({
-        title: "Brak adresu e-mail",
-        description: "Najpierw wpisz swój adres e-mail w polu powyżej, a potem kliknij ten link.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    const redirectTo = `${window.location.origin}/update-password`;
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo,
-    });
-
-    if (error) {
-      toast({ title: "Błąd", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Link wysłany!", description: "Sprawdź skrzynkę e-mail, aby ustawić nowe hasło." });
-    }
-    setLoading(false);
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-muted/40 p-4">
       <Card className="w-full max-w-sm">
@@ -95,15 +68,6 @@ export default function Auth() {
               <Button type="submit" className="w-full text-base" disabled={loading}>
                 {loading ? <span>Logowanie...</span> : <span>Zaloguj się</span>}
               </Button>
-            </div>
-            <div className="text-center text-sm">
-              <button
-                type="button"
-                onClick={handlePasswordReset}
-                className="underline text-muted-foreground hover:text-primary transition-colors"
-              >
-                Zapomniałeś hasła lub ustaw nowe
-              </button>
             </div>
           </form>
         </CardContent>
