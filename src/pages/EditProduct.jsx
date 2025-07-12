@@ -1,3 +1,5 @@
+// src/pages/EditProduct.jsx - Wersja z inteligentnym Comboboxem
+
 import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
@@ -8,6 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card"
 import { useToast } from "@/components/ui/use-toast"
+import CategoryCombobox from '@/components/CategoryCombobox' // <<< Importujemy nasz komponent
 
 export default function EditProduct() {
   const { id } = useParams();
@@ -15,6 +18,12 @@ export default function EditProduct() {
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
+  
+  // Stany dla opcji w Comboboxach
+  const [allCategories, setAllCategories] = useState([]);
+  const [allSubcategories, setAllSubcategories] = useState([]);
+
+  // Stany dla pól formularza
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -22,31 +31,52 @@ export default function EditProduct() {
   const [notes, setNotes] = useState('');
 
   useEffect(() => {
-    async function getProduct() {
+    async function fetchData() {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // Pobieramy dane edytowanego produktu
+      const { data: productData, error: productError } = await supabase
         .from('produkty')
         .select('*')
         .eq('id', id)
         .single();
 
-      if (error) {
+      if (productError) {
         toast({ title: "Błąd", description: "Nie udało się pobrać danych produktu.", variant: "destructive" });
         navigate('/');
-      } else if (data) {
-        setProductName(data.nazwa);
-        setCategory(data.kategoria);
-        setSubcategory(data.podkategoria || '');
-        setUnit(data.jednostka || 'szt.');
-        setNotes(data.uwagi || '');
+        return;
       }
+
+      if (productData) {
+        setProductName(productData.nazwa);
+        setCategory(productData.kategoria);
+        setSubcategory(productData.podkategoria || '');
+        setUnit(productData.jednostka || 'szt.');
+        setNotes(productData.uwagi || '');
+      }
+
+      // Pobieramy wszystkie istniejące kategorie i podkategorie do podpowiedzi
+      const { data: optionsData, error: optionsError } = await supabase.from('produkty').select('kategoria, podkategoria');
+      
+      if (optionsData) {
+        const uniqueCategories = [...new Set(optionsData.map(p => p.kategoria).filter(Boolean))];
+        const uniqueSubcategories = [...new Set(optionsData.map(p => p.podkategoria).filter(Boolean))];
+        setAllCategories(uniqueCategories);
+        setAllSubcategories(uniqueSubcategories);
+      }
+      
       setLoading(false);
     }
-    getProduct();
+    fetchData();
   }, [id, navigate, toast]);
 
   async function handleSubmit(event) {
     event.preventDefault();
+    if (!productName || !category) {
+      toast({ title: "Błąd walidacji", description: "Nazwa i kategoria produktu są wymagane.", variant: "destructive" });
+      return;
+    }
+
     setLoading(true);
     try {
       const { error } = await supabase
@@ -54,9 +84,9 @@ export default function EditProduct() {
         .update({
           nazwa: productName,
           kategoria: category,
-          podkategoria: subcategory,
+          podkategoria: subcategory || null,
           jednostka: unit,
-          uwagi: notes,
+          uwagi: notes || null,
         })
         .eq('id', id);
 
@@ -79,27 +109,39 @@ export default function EditProduct() {
     <div className="flex flex-col gap-6">
       <h1 className="text-3xl font-bold">Edytuj Produkt</h1>
       <Card className="w-full md:max-w-xl">
-        <CardHeader>
-          <CardTitle>Zmień dane produktu</CardTitle>
-        </CardHeader>
+        <CardHeader><CardTitle>Zmień dane produktu</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="productName">Nazwa produktu</Label>
               <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} required />
             </div>
+
+            {/* PODMIENIONE POLA NA COMBOBOXY */}
             <div className="grid gap-2">
-              <Label htmlFor="category">Kategoria</Label>
-              <Input id="category" value={category} onChange={(e) => setCategory(e.target.value)} required />
+              <Label>Kategoria</Label>
+              <CategoryCombobox
+                value={category}
+                setValue={setCategory}
+                options={allCategories}
+                placeholder="Wybierz lub wpisz nową..."
+              />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="subcategory">Podkategoria</Label>
-              <Input id="subcategory" value={subcategory} onChange={(e) => setSubcategory(e.target.value)} />
+              <Label>Podkategoria</Label>
+              <CategoryCombobox
+                value={subcategory}
+                setValue={setSubcategory}
+                options={allSubcategories}
+                placeholder="Wybierz lub wpisz nową..."
+              />
             </div>
+
             <div className="grid gap-2">
               <Label htmlFor="notes">Uwagi</Label>
-              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Wpisz dodatkowe informacje..."/>
+              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
             </div>
+            
             <div className="grid gap-2">
               <Label htmlFor="unit">Jednostka</Label>
               <Select onValueChange={setUnit} value={unit}>
@@ -113,6 +155,7 @@ export default function EditProduct() {
                 </SelectContent>
               </Select>
             </div>
+
             <Button type="submit" disabled={loading} className="w-full mt-2">
               {loading ? 'Zapisywanie...' : 'Zapisz zmiany'}
             </Button>
