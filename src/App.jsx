@@ -1,9 +1,7 @@
 import { useState, useEffect } from 'react'
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
+import { Routes, Route, Link, useNavigate } from 'react-router-dom'
 import { supabase } from './supabaseClient'
 import { Menu } from 'lucide-react'
-
-// Importy UI i stron
 import { Button } from '@/components/ui/button'
 import { Toaster } from '@/components/ui/toaster'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
@@ -17,75 +15,55 @@ import UpdatePassword from './pages/UpdatePassword'
 function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const location = useLocation()
 
   useEffect(() => {
-    // Sprawdzamy sesję przy pierwszym załadowaniu.
+    // Sprawdzamy sesję przy pierwszym załadowaniu
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session)
       setLoading(false)
     })
 
-    // Ustawiamy nasłuchiwanie na zmiany stanu autentykacji.
+    // Nasłuchujemy na zmiany
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session)
     })
 
-    return () => {
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
-  
-  // Sprawdzamy, czy w adresie URL jest fragment od resetu hasła.
-  // Robimy to przy każdym renderze. To jest kluczowe.
-  const isPasswordRecovery = location.hash.includes('type=recovery')
 
   if (loading) {
     return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>
   }
 
-  // --- OSTATECZNA LOGIKA ROUTINGU ---
-  
-  // Jeśli jesteśmy w trakcie resetowania hasła, ZAWSZE I BEZWARUNKOWO
-  // pokazuj stronę do zmiany hasła. Ten warunek ma najwyższy priorytet.
-  if (isPasswordRecovery) {
-    return (
-      <div className="dark min-h-screen bg-background text-foreground">
-        <UpdatePassword />
-        <Toaster />
-      </div>
-    )
-  }
-
-  // Jeśli nie jesteśmy w trybie resetowania I jest sesja,
-  // pokazujemy główną aplikację.
-  if (session) {
-    return (
-      <div className="dark min-h-screen bg-background text-foreground">
-        <MainApp />
-        <Toaster />
-      </div>
-    )
-  }
-
-  // W każdym innym przypadku (brak sesji, brak resetu),
-  // pokazujemy stronę logowania.
+  // Toaster jest teraz na zewnątrz, więc zawsze się renderuje.
+  // Główny routing jest oparty na prostym warunku `session`.
   return (
     <div className="dark min-h-screen bg-background text-foreground">
-      <Auth />
+      <Routes>
+        {session ? (
+          // --- ŚCIEŻKI DLA ZALOGOWANEGO UŻYTKOWNIKA ---
+          <Route path="/*" element={<MainApp />} />
+        ) : (
+          // --- ŚCIEŻKI DLA NIEZALOGOWANEGO UŻYTKOWNIKA ---
+          <>
+            <Route path="/update-password" element={<UpdatePassword />} />
+            <Route path="*" element={<Auth />} />
+          </>
+        )}
+      </Routes>
       <Toaster />
     </div>
   )
 }
 
-// Komponent dla głównej części aplikacji, żeby kod był czystszy
+// Komponent dla głównej części aplikacji
 function MainApp() {
-  const navigate = useNavigate()
+  const navigate = useNavigate();
   const handleLogout = () => {
     supabase.auth.signOut().then(() => {
-      navigate('/login', { replace: true })
-    })
-  }
+      navigate('/login', { replace: true });
+    });
+  };
 
   return (
     <>
@@ -117,7 +95,6 @@ function MainApp() {
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          {/* Jeśli zalogowany użytkownik jakimś cudem trafi na /update-password, też mu ją pokażemy */}
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
@@ -126,4 +103,4 @@ function MainApp() {
   )
 }
 
-export default App
+export default App;
