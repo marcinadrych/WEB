@@ -1,20 +1,15 @@
-// src/pages/Dashboard.jsx - Wersja z grupowaniem po kategoriach
-
-import { useState, useEffect, useMemo } from 'react' // Dodajemy useMemo
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Accordion } from "@/components/ui/accordion"
-import ProductListItem from '@/components/ProductListItem' // Używamy naszego komponentu
+// --- POPRAWIONY IMPORT ---
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import ProductListItem from '@/components/ProductListItem'
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Skaner QR zostawiamy na boku na razie, żeby uprościć kod
-  // const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   useEffect(() => {
     getProducts()
@@ -31,9 +26,7 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  // Używamy useMemo, żeby filtrowanie i grupowanie nie wykonywało się przy każdym renderze
   const groupedAndFilteredProducts = useMemo(() => {
-    // 1. Filtrujemy produkty
     const filtered = products.filter(product => {
       const searchTermLower = searchTerm.toLowerCase();
       const podkategoria = product.podkategoria || '';
@@ -45,7 +38,6 @@ export default function Dashboard() {
       );
     });
 
-    // 2. Grupujemy przefiltrowane produkty
     const grouped = filtered.reduce((acc, product) => {
       const category = product.kategoria;
       if (!acc[category]) {
@@ -57,7 +49,6 @@ export default function Dashboard() {
 
     return grouped;
   }, [products, searchTerm]);
-
 
   return (
     <div className="flex flex-col gap-6">
@@ -71,7 +62,6 @@ export default function Dashboard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-sm"
             />
-            {/* Przycisk skanera na razie ukryty dla uproszczenia */}
           </div>
         </CardHeader>
         <CardContent>
