@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,6 +12,20 @@ export default function UpdatePassword() {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const { toast } = useToast()
+  const location = useLocation()
+
+  // 🔐 Odczytaj tokeny z hasha URL-a i ustaw sesję Supabase
+  useEffect(() => {
+    const hash = location.hash
+    const params = new URLSearchParams(hash.replace('#', ''))
+
+    const access_token = params.get('access_token')
+    const refresh_token = params.get('refresh_token')
+
+    if (access_token && refresh_token) {
+      supabase.auth.setSession({ access_token, refresh_token })
+    }
+  }, [location])
 
   const handleUpdatePassword = async (event) => {
     event.preventDefault()
@@ -26,18 +41,20 @@ export default function UpdatePassword() {
     }
 
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password: password })
+    const { error } = await supabase.auth.updateUser({ password })
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" })
       setLoading(false)
     } else {
-      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania." })
-      
-      // Proste i niezawodne przekierowanie po 2 sekundach
+      toast({
+        title: "Sukces!",
+        description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania.",
+      })
+
       setTimeout(() => {
-        window.location.href = "/login";
-      }, 2000);
+        window.location.href = "/login"
+      }, 2000)
     }
   }
 
