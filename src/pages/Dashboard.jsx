@@ -1,18 +1,21 @@
-// src/pages/Dashboard.jsx - Wersja z automatycznym otwieraniem po wyszukaniu
-
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Accordion } from "@/components/ui/accordion"
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import ProductListItem from '@/components/ProductListItem'
+
+// Importujemy brakujące komponenty, których używa ProductListItem
+import { Link } from 'react-router-dom'
+import * as QRCode from 'qrcode.react'
+import { Button } from "@/components/ui/button"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // NOWY STAN: Przechowuje ID kategorii i podkategorii, które mają być otwarte
   const [openAccordionItems, setOpenAccordionItems] = useState([]);
 
   useEffect(() => {
@@ -21,14 +24,17 @@ export default function Dashboard() {
 
   async function getProducts() {
     setLoading(true);
-    const { data } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
-    setProducts(data || []);
+    const { data, error } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
+    if (error) {
+      console.error("Błąd pobierania produktów:", error);
+    } else {
+      setProducts(data || []);
+    }
     setLoading(false);
   }
 
   const groupedAndFilteredProducts = useMemo(() => {
     const filtered = products.filter(product => {
-      // ... logika filtrowania bez zmian ...
       const searchTermLower = searchTerm.toLowerCase();
       const podkategoria = product.podkategoria || '';
       return (
@@ -39,25 +45,25 @@ export default function Dashboard() {
       );
     });
 
-    // --- NOWA LOGIKA AUTOMATYCZNEGO OTWIERANIA ---
-    // Jeśli po przefiltrowaniu został tylko JEDEN produkt,
-    // ustawiamy jego kategorię i podkategorię jako domyślnie otwarte.
-    if (filtered.length === 1) {
+    if (filtered.length === 1 && searchTerm.length > 0) {
       const singleProduct = filtered[0];
       const categoryKey = `category-${singleProduct.kategoria}`;
       const subcategoryKey = `subcategory-${singleProduct.podkategoria || 'Bez podkategorii'}`;
-      setOpenAccordionItems([categoryKey, subcategoryKey]);
-    } else {
-      // Jeśli wyników jest więcej (lub nie ma), resetujemy stan otwartych akordeonów
+      // Używamy funkcji zwrotnej, żeby uniknąć pętli renderowania
+      setOpenAccordionItems(prev => [categoryKey, subcategoryKey]);
+    } else if (searchTerm.length === 0) {
       setOpenAccordionItems([]);
     }
 
-    // Logika grupowania pozostaje bez zmian
     const grouped = filtered.reduce((acc, product) => {
       const category = product.kategoria;
-      const subcategory = product.podkategoria || 'Bez podkategorii';
-      if (!acc[category]) acc[category] = {};
-      if (!acc[category][subcategory]) acc[category][subcategory] = [];
+      const subcategory = product.podkategoria || 'Bez podkategorii'; 
+      if (!acc[category]) {
+        acc[category] = {};
+      }
+      if (!acc[category][subcategory]) {
+        acc[category][subcategory] = [];
+      }
       acc[category][subcategory].push(product);
       return acc;
     }, {});
@@ -78,14 +84,12 @@ export default function Dashboard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-sm"
             />
-            {/* Możemy tu w przyszłości przywrócić skaner QR */}
           </div>
         </CardHeader>
         <CardContent>
           {loading ? (
             <p className="text-center py-10">Ładowanie...</p>
           ) : Object.keys(groupedAndFilteredProducts).length > 0 ? (
-            // Przekazujemy stan otwartych elementów do głównego akordeonu
             <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
               {Object.entries(groupedAndFilteredProducts).map(([category, subcategories]) => (
                 <AccordionItem value={`category-${category}`} key={category}>
@@ -93,7 +97,6 @@ export default function Dashboard() {
                     {category}
                   </AccordionTrigger>
                   <AccordionContent className="p-0 pl-4 border-l">
-                    {/* Przekazujemy stan także do zagnieżdżonego akordeonu */}
                     <Accordion type="multiple" className="w-full" value={openAccordionItems} onValueChange={setOpenAccordionItems}>
                       {Object.entries(subcategories).map(([subcategory, productsInCategory]) => (
                         <AccordionItem value={`subcategory-${subcategory}`} key={subcategory}>
