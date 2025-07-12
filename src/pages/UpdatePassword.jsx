@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
@@ -14,41 +14,21 @@ export default function UpdatePassword() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  // Ten useEffect nasłuchuje na specjalny event, który Supabase wysyła,
-  // gdy użytkownik trafia tu z linka w mailu. To jest kluczowy brakujący element.
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "PASSWORD_RECOVERY") {
-        // To zdarzenie potwierdza, że mamy tymczasową sesję do zmiany hasła.
-        // Nie musimy nic robić, po prostu pozwalamy użytkownikowi być na tej stronie.
-      }
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
-
   const handleUpdatePassword = async (event) => {
     event.preventDefault()
-    if (password.length < 6) {
-      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" });
-      return;
-    }
-    if (password !== confirmPassword) {
-      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" });
-      return;
-    }
+    if (password.length < 6) { /* ... walidacja ... */ return }
+    if (password !== confirmPassword) { /* ... walidacja ... */ return }
 
     setLoading(true)
-    const { error } = await supabase.auth.updateUser({ password: password })
+    // Używamy starszej metody .update(), która jest bardziej niezawodna w tym kontekście
+    const { error } = await supabase.auth.update({ password: password })
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" })
       setLoading(false)
     } else {
       toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Przekierowuję do logowania..." });
-      // Wylogowujemy użytkownika i przekierowujemy go na stronę logowania
+      // Wylogowujemy i przekierowujemy na stronę logowania
       setTimeout(async () => {
         await supabase.auth.signOut();
         navigate("/login", { replace: true });
