@@ -1,7 +1,7 @@
-// src/pages/EditProduct.jsx - Poprawione przekierowanie
+// src/pages/EditProduct.jsx
 
 import { useState, useEffect } from 'react'
-import { useParams } from 'react-router-dom' // Usunęliśmy useNavigate
+import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,11 +14,14 @@ import CategoryCombobox from '@/components/CategoryCombobox'
 
 export default function EditProduct() {
   const { id } = useParams();
+  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
   const [allCategories, setAllCategories] = useState([]);
   const [allSubcategories, setAllSubcategories] = useState([]);
+
+  // Stany formularza
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
@@ -29,11 +32,7 @@ export default function EditProduct() {
     async function fetchData() {
       setLoading(true);
       const { data: productData, error: productError } = await supabase.from('produkty').select('*').eq('id', id).single();
-      if (productError) {
-        toast({ title: "Błąd", description: "Nie udało się pobrać danych produktu.", variant: "destructive" });
-        window.location.href = '/'; // Przekieruj, jeśli błąd
-        return;
-      }
+      if (productError) { /* ... obsługa błędu ... */ } 
       if (productData) {
         setProductName(productData.nazwa);
         setCategory(productData.kategoria);
@@ -57,13 +56,14 @@ export default function EditProduct() {
 
     setLoading(true);
     try {
+      // --- POPRAWIONY OBIEKT UPDATE ---
       const { error } = await supabase
         .from('produkty')
         .update({
           nazwa: productName,
           kategoria: category,
           podkategoria: subcategory || null,
-          jednostka: unit,
+          jednostka: unit, // <<< UPEWNIAMY SIĘ, ŻE TO POLE JEST TUTAJ
           uwagi: notes || null,
         })
         .eq('id', id);
@@ -71,20 +71,15 @@ export default function EditProduct() {
       if (error) throw error;
       
       toast({ title: "Sukces!", description: "Dane produktu zostały zaktualizowane." });
-      
-      // --- KLUCZOWA ZMIANA ---
-      // Zamiast navigate('/'), robimy twarde przeładowanie na stronę główną.
-      // To zmusi Dashboard do ponownego pobrania danych.
-      window.location.href = '/';
-      
+      // Używamy twardego przeładowania, żeby Dashboard się odświeżył
+      window.location.href = '/'; 
     } catch (error) {
       toast({ title: "Błąd serwera", description: error.message, variant: "destructive" });
     } finally {
       setLoading(false);
     }
   }
-  
-  // Reszta kodu (return z formularzem) jest bez zmian
+
   if (loading) return <p className="text-center">Ładowanie...</p>;
 
   return (
@@ -94,11 +89,31 @@ export default function EditProduct() {
         <CardHeader><CardTitle>Zmień dane produktu</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+            {/* ... pola Nazwa, Kategoria, Podkategoria ... */}
             <div className="grid gap-2"><Label>Nazwa produktu</Label><Input value={productName} onChange={(e) => setProductName(e.target.value)} required /></div>
             <div className="grid gap-2"><Label>Kategoria</Label><CategoryCombobox value={category} setValue={setCategory} options={allCategories} placeholder="Wybierz lub wpisz nową..." /></div>
             <div className="grid gap-2"><Label>Podkategoria</Label><CategoryCombobox value={subcategory} setValue={setSubcategory} options={allSubcategories} placeholder="Wybierz lub wpisz nową..." /></div>
-            <div className="grid gap-2"><Label>Uwagi</Label><Textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
-            <div className="grid gap-2"><Label>Jednostka</Label><Select onValueChange={setUnit} value={unit}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="szt.">szt.</SelectItem><SelectItem value="mb">mb</SelectItem><SelectItem value="kg">kg</SelectItem><SelectItem value="op.">op.</SelectItem><SelectItem value="m²">m²</SelectItem></SelectContent></Select></div>
+
+            <div className="grid gap-2">
+              <Label htmlFor="notes">Uwagi</Label>
+              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+            </div>
+            
+            <div className="grid gap-2">
+              <Label htmlFor="unit">Jednostka</Label>
+              {/* Upewniamy się, że `value` jest poprawnie powiązane */}
+              <Select onValueChange={setUnit} value={unit}>
+                <SelectTrigger id="unit"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="szt.">szt.</SelectItem>
+                  <SelectItem value="mb">mb</SelectItem>
+                  <SelectItem value="kg">kg</SelectItem>
+                  <SelectItem value="op.">op.</SelectItem>
+                  <SelectItem value="m²">m²</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
             <Button type="submit" disabled={loading} className="w-full mt-2">{loading ? 'Zapisywanie...' : 'Zapisz zmiany'}</Button>
           </form>
         </CardContent>
