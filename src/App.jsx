@@ -22,25 +22,18 @@ function App() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Nasłuchujemy na zmiany stanu autentykacji
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // Niezależnie od eventu, zawsze aktualizujemy sesję
       setSession(session);
       setLoading(false);
-      
-      // Jeśli event to PASSWORD_RECOVERY, to znaczy, że użytkownik kliknął link
-      // z maila i Supabase dał mu tymczasową sesję. Przekierowujemy go ręcznie.
       if (event === "PASSWORD_RECOVERY") {
         navigate("/update-password");
       }
     });
 
-    // Sprawdzamy też sesję przy pierwszym załadowaniu, na wypadek gdyby użytkownik już był zalogowany
     supabase.auth.getSession().then(({ data: { session } }) => {
         if (!session) {
-            // Jeśli nie ma sesji, a nie jesteśmy na stronie update-password, to idziemy do logowania
             if (window.location.pathname !== '/update-password') {
-                navigate('/login');
+                navigate('/login', { replace: true });
             }
         }
         setSession(session)
@@ -52,15 +45,14 @@ function App() {
     };
   }, [navigate]);
 
-  // Ekran ładowania, dopóki nie ustalimy, czy jest sesja
   if (loading) {
-    return <div className="min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>;
+    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>;
   }
 
-  // Jeśli nie ma sesji, pokazujemy tylko strony publiczne
+  // Jeśli nie ma sesji, pokazujemy strony publiczne
   if (!session) {
     return (
-      <div className="min-h-screen bg-background text-foreground">
+      <div className="dark min-h-screen bg-background text-foreground"> {/* KLASA DARK TUTAJ */}
         <Routes>
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Auth />} />
@@ -72,7 +64,7 @@ function App() {
 
   // Jeśli jest sesja, pokazujemy główną aplikację
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="dark min-h-screen bg-background text-foreground"> {/* I KLASA DARK TUTAJ */}
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto flex h-16 items-center justify-between">
           <Link to="/" className="text-xl font-bold">Magazyn</Link>
