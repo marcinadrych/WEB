@@ -28,37 +28,9 @@ export default function Auth() {
         variant: "destructive",
       })
     }
-    // Jeśli sukces, App.jsx automatycznie obsłuży zmianę sesji
+    // Jeśli logowanie się powiedzie, onAuthStateChange w App.jsx
+    // automatycznie obsłuży zmianę sesji i przerenderuje aplikację.
     setLoading(false)
-  }
-
-  // Funkcja do obsługi resetowania hasła
-  const handlePasswordReset = async (e) => {
-    e.preventDefault();
-    if (!email) {
-      toast({
-        title: "Brak adresu e-mail",
-        description: "Najpierw wpisz swój adres e-mail w polu powyżej, a potem kliknij ten link.",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    setLoading(true);
-    // redirectTo mówi Supabase, gdzie przekierować użytkownika po kliknięciu linka w mailu.
-    // Musimy stworzyć tę podstronę, żeby mógł ustawić nowe hasło.
-    const redirectTo = `${window.location.origin}/update-password`;
-
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo,
-    });
-
-    if (error) {
-      toast({ title: "Błąd", description: error.message, variant: "destructive" });
-    } else {
-      toast({ title: "Link wysłany!", description: "Sprawdź skrzynkę e-mail, aby ustawić nowe hasło." });
-    }
-    setLoading(false);
   }
 
   return (
@@ -98,15 +70,6 @@ export default function Auth() {
               <Button type="submit" className="w-full text-base" disabled={loading}>
                 {loading ? <span>Logowanie...</span> : <span>Zaloguj się</span>}
               </Button>
-            </div>
-            <div className="text-center text-sm">
-              <button
-                type="button" // Ważne, żeby nie wysyłał formularza
-                onClick={handlePasswordReset}
-                className="underline text-muted-foreground hover:text-primary transition-colors"
-              >
-                Zapomniałeś hasła lub ustaw nowe
-              </button>
             </div>
           </form>
         </CardContent>
