@@ -17,35 +17,24 @@ export default function UpdatePassword() {
   const { toast } = useToast()
 
   const handleUpdatePassword = async (event) => {
-    // Krok 1: Zapobiegamy domyślnemu przeładowaniu strony
     event.preventDefault()
-
-    // Krok 2: Walidacja - sprawdzamy, czy hasła są wystarczająco długie i takie same
-    if (password.length < 6) {
-      toast({ title: "Błąd", description: "Hasło musi mieć co najmniej 6 znaków.", variant: "destructive" })
-      return
-    }
-    if (password !== confirmPassword) {
-      toast({ title: "Błąd", description: "Hasła nie są takie same.", variant: "destructive" })
+    if (password.length < 6 || password !== confirmPassword) {
+      toast({ title: "Błąd", description: "Hasła nie są takie same lub są za krótkie.", variant: "destructive" })
       return
     }
 
     setLoading(true)
-    
-    // Krok 3: Wywołujemy funkcję Supabase do aktualizacji hasła użytkownika
-    // Supabase automatycznie wie, kim jest użytkownik, dzięki tokenowi z URL-a,
-    // który jest przechowywany w sesji przeglądarki.
-    const { error } = await supabase.auth.updateUser({ password: password })
+    console.log("Próba aktualizacji hasła..."); // <<< SZPIEG NR 1
 
-    // Krok 4: Obsługa wyniku
+    const { data, error } = await supabase.auth.updateUser({ password: password })
+
     if (error) {
-      toast({ title: "Błąd", description: "Nie udało się zaktualizować hasła. Spróbuj ponownie.", variant: "destructive" })
+      console.error("Błąd z Supabase podczas aktualizacji hasła:", error); // <<< SZPIEG NR 2
+      toast({ title: "Błąd serwera", description: error.message, variant: "destructive" })
     } else {
-      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany." })
-      
-      // Krok 5: Czekamy 2 sekundy i przekierowujemy na stronę logowania
+      console.log("Sukces! Hasło zaktualizowane. Dane użytkownika:", data); // <<< SZPIEG NR 3
+      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Przekierowuję..." });
       setTimeout(() => {
-        // Twarde przeładowanie na stronę logowania jest najpewniejsze
         window.location.href = "/login";
       }, 2000);
     }
@@ -60,34 +49,16 @@ export default function UpdatePassword() {
           <CardDescription>Wprowadź swoje nowe hasło poniżej.</CardDescription>
         </CardHeader>
         <CardContent>
-          {/* Upewniamy się, że formularz ma podpiętą funkcję `onSubmit` */}
           <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="password">Nowe hasło (min. 6 znaków)</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
-              />
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Potwierdź nowe hasło</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                required
-                onChange={(e) => setConfirmPassword(e.target.value)}
-              />
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
-            {/* Przycisk jest typu "submit", więc wywoła `onSubmit` formularza */}
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}
-            </Button>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}</Button>
           </form>
         </CardContent>
       </Card>
