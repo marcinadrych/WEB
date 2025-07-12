@@ -1,5 +1,4 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -11,7 +10,6 @@ export default function UpdatePassword() {
   const [loading, setLoading] = useState(false)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const navigate = useNavigate()
   const { toast } = useToast()
 
   const handleUpdatePassword = async (event) => {
@@ -28,16 +26,19 @@ export default function UpdatePassword() {
     }
 
     setLoading(true)
-    // Supabase wie, kim jest użytkownik, na podstawie unikalnego tokena w adresie URL
     const { error } = await supabase.auth.updateUser({ password: password })
 
     if (error) {
       toast({ title: "Błąd", description: error.message, variant: "destructive" })
+      setLoading(false)
     } else {
-      toast({ title: "Sukces!", description: "Twoje hasło zostało pomyślnie zaktualizowane. Możesz się teraz zalogować." })
-      navigate('/') // Przekieruj na stronę logowania (lub główną)
+      toast({ title: "Sukces!", description: "Hasło zostało zaktualizowane. Za chwilę zostaniesz przekierowany na stronę logowania." })
+      
+      // KLUCZOWA ZMIANA: Zamiast navigate, robimy twarde przeładowanie
+      setTimeout(() => {
+        window.location.href = "/login"; // To jest niezawodny sposób na przekierowanie
+      }, 2000); // Czekamy 2 sekundy, żeby użytkownik zdążył przeczytać toasta
     }
-    setLoading(false)
   }
 
   return (
@@ -50,34 +51,14 @@ export default function UpdatePassword() {
         <CardContent>
           <form onSubmit={handleUpdatePassword} className="flex flex-col gap-4">
             <div className="grid gap-2">
-              <Label htmlFor="password">Nowe hasło</Label>
-              <Input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={password}
-                required
-                onChange={(e) => setPassword(e.target.value)}
-                className="text-base"
-              />
+              <Label htmlFor="password">Nowe hasło (min. 6 znaków)</Label>
+              <Input id="password" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirmPassword">Potwierdź nowe hasło</Label>
-              <Input
-                id="confirmPassword"
-                type="password"
-                placeholder="••••••••"
-                value={confirmPassword}
-                required
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="text-base"
-              />
+              <Input id="confirmPassword" type="password" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required />
             </div>
-            <div>
-              <Button type="submit" className="w-full text-base" disabled={loading}>
-                {loading ? <span>Zapisywanie...</span> : <span>Zapisz nowe hasło</span>}
-              </Button>
-            </div>
+            <Button type="submit" className="w-full" disabled={loading}>{loading ? 'Zapisywanie...' : 'Zapisz nowe hasło'}</Button>
           </form>
         </CardContent>
       </Card>
