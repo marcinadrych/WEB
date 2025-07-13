@@ -1,17 +1,15 @@
-// src/layouts/MainLayout.jsx
-
 import { Routes, Route, Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Importujemy wszystkie strony, które ten layout będzie renderował
+// Upewnij się, że wszystkie te pliki istnieją w folderze `src/pages`
 import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
 import EditProduct from '@/pages/EditProduct';
-import QRPage from '@/pages/QRPage'; 
+import QRPage from '@/pages/QRPage'; // Kluczowy import
 
 export default function MainLayout() {
   const { signOut } = useAuth();
@@ -41,12 +39,13 @@ export default function MainLayout() {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
+        {/* Zagnieżdżony router musi zawierać ścieżkę do QRPage */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          <Route path="/qr" element={<QRPage />} />
+          <Route path="/qr" element={<QRPage />} /> {/* <<< TA LINIA JEST KLUCZOWA */}
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
