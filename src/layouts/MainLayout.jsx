@@ -1,9 +1,12 @@
 // src/layouts/MainLayout.jsx
-import { Routes, Route, Link } from 'react-router-dom';
-import { useAuth } from '@/context/AuthContext';
+
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { supabase } from '@/supabaseClient';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+
+// Importujemy wszystkie strony
 import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
@@ -11,7 +14,12 @@ import EditProduct from '@/pages/EditProduct';
 import QRPage from '@/pages/QRPage'; 
 
 export default function MainLayout() {
-  const { signOut } = useAuth();
+  const navigate = useNavigate();
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    navigate('/login', { replace: true });
+  };
+
   return (
     <>
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
@@ -21,7 +29,7 @@ export default function MainLayout() {
             <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
             <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
             <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
-            <Button onClick={signOut} variant="secondary">Wyloguj</Button>
+            <Button onClick={handleLogout} variant="secondary">Wyloguj</Button>
           </nav>
           <div className="md:hidden">
             <DropdownMenu>
@@ -30,7 +38,7 @@ export default function MainLayout() {
                 <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/zmien-stan">Zmień Stan</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/dodaj-produkt">Nowy Produkt</Link></DropdownMenuItem>
-                <DropdownMenuItem onClick={signOut}>Wyloguj</DropdownMenuItem>
+                <DropdownMenuItem onClick={handleLogout}>Wyloguj</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -42,7 +50,7 @@ export default function MainLayout() {
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          <Route path="/qr" element={<QRPage />} />
+          <Route path="/qr" element={<QRPage />} /> {/* Ważne dla kodów QR */}
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
