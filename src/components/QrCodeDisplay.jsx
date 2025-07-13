@@ -1,26 +1,15 @@
 // src/components/QrCodeDisplay.jsx
-
 import { useEffect, useState } from 'react';
-import QRCode from 'qrcode'; // Importujemy nową bibliotekę
+import QRCode from 'qrcode';
 
 export default function QrCodeDisplay({ value }) {
   const [qrCodeUrl, setQrCodeUrl] = useState('');
-
   useEffect(() => {
-    // Generujemy kod QR jako Data URL, gdy tylko dostaniemy `value`
     QRCode.toDataURL(value, { width: 256, margin: 2 })
-      .then(url => {
-        setQrCodeUrl(url);
-      })
-      .catch(err => {
-        console.error("Błąd generowania kodu QR:", err);
-      });
+      .then(url => setQrCodeUrl(url))
+      .catch(err => console.error("Błąd generowania QR:", err));
   }, [value]);
 
-  if (!qrCodeUrl) {
-    return <p>Generowanie kodu QR...</p>;
-  }
-
-  // Zwykły tag <img> jest najbardziej niezawodnym sposobem wyświetlania
+  if (!qrCodeUrl) return <p>Generowanie kodu...</p>;
   return <img src={qrCodeUrl} alt="Kod QR" />;
 }

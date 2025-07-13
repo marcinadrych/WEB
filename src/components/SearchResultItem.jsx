@@ -1,34 +1,26 @@
 // src/components/SearchResultItem.jsx
-
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import QrCodeDisplay from './QrCodeDisplay';
 
 export default function SearchResultItem({ product }) {
-  const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
-
   return (
-    // Prosty div z obramowaniem
-    <div className="border rounded-lg p-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-      <div className="flex-grow">
-        <h3 className="font-bold text-lg">{product.nazwa}</h3>
-        <p className="text-sm text-muted-foreground">
-          {product.kategoria} {product.podkategoria ? `/ ${product.podkategoria}` : ''}
-        </p>
+    <div className="border rounded-lg p-4 flex justify-between items-center">
+      <div>
+        <h3 className="font-medium text-lg">{product.nazwa}</h3>
+        <p className="text-sm text-muted-foreground">{product.kategoria} / {product.podkategoria || 'Brak'}</p>
       </div>
-
-      <div className="flex items-center gap-4 w-full md:w-auto">
-        <span className={`flex-grow md:flex-grow-0 text-left md:text-right font-bold text-2xl ${product.ilosc < 5 ? 'text-red-500' : 'text-green-500'}`}>
-          {product.ilosc} {product.jednostka}
-        </span>
+      <div className="flex items-center gap-4">
+        <span className={`font-bold text-2xl ${product.ilosc < 5 ? 'text-red-500' : 'text-green-500'}`}>{product.ilosc} {product.jednostka}</span>
         <div className="flex gap-2">
-          <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
-            <Button variant="outline" size="sm">QR</Button>
-          </a>
-          <Link to={`/edytuj-produkt/${product.id}`}>
-            <Button size="sm">Edytuj</Button>
-          </Link>
+          <Dialog>
+            <DialogTrigger asChild><Button variant="outline" size="sm">QR</Button></DialogTrigger>
+            <DialogContent className="sm:max-w-md"><DialogHeader><DialogTitle>Kod QR dla: {product.nazwa}</DialogTitle></DialogHeader><div className="flex items-center justify-center p-6"><QrCodeDisplay value={String(product.id)} /></div></DialogContent>
+          </Dialog>
+          <Link to={`/edytuj-produkt/${product.id}`}><Button size="sm">Edytuj</Button></Link>
         </div>
       </div>
     </div>
-  )
+  );
 }
