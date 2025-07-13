@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react';
-import { Routes, Route, useNavigate } from 'react-router-dom';
+import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabaseClient';
 import { Toaster } from '@/components/ui/toaster';
 
-// Importy
 import MainLayout from './layouts/MainLayout';
 import Auth from './pages/Auth';
 import UpdatePassword from './pages/UpdatePassword';
@@ -24,11 +23,17 @@ export default function App() {
       setSession(session);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, []);
 
   if (loading) {
-    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>;
+    return (
+      <div className="dark min-h-screen flex items-center justify-center">
+        <p>Ładowanie...</p>
+      </div>
+    );
   }
 
   return (
@@ -45,6 +50,8 @@ export default function App() {
           </>
         )}
       </Routes>
+      
+      {/* Toaster jest teraz na zewnątrz, więc działa zawsze */}
       <Toaster />
     </div>
   );

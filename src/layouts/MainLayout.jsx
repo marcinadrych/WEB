@@ -1,12 +1,10 @@
-// src/layouts/MainLayout.jsx
-
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Importujemy wszystkie strony
+// Importujemy wszystkie strony, które ten layout będzie renderował
 import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
@@ -45,12 +43,13 @@ export default function MainLayout() {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
+        {/* Zagnieżdżony router, który renderuje odpowiednią podstronę */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          <Route path="/qr" element={<QRPage />} /> {/* Ważne dla kodów QR */}
+          <Route path="/qr" element={<QRPage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
