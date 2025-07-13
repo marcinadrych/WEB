@@ -1,5 +1,3 @@
-// src/pages/QRPage.jsx
-
 import { useLocation } from 'react-router-dom';
 import * as QRCode from 'qrcode.react';
 import { Button } from "@/components/ui/button";

@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function ProductListItem({ product }) {
-  // Tworzymy dynamiczny link do naszej nowej strony QR
   const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
 
   return (
@@ -34,7 +33,6 @@ export default function ProductListItem({ product }) {
             <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">Pokaż QR</Button>
             </a>
-            
             <Link to={`/edytuj-produkt/${product.id}`}>
               <Button size="sm">Edytuj</Button>
             </Link>
