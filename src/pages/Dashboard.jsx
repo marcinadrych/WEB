@@ -1,63 +1,30 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+// src/pages/Dashboard.jsx - Ostateczna wersja z dwoma widokami
+
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/supabaseClient'
-import { Html5QrcodeScanner } from 'html5-qrcode'
 import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import ProductListItem from '@/components/ProductListItem'
-
-const qrcodeRegionId = "html5qr-code-full-region";
+import ProductListItem from '@/components/ProductListItem' // Do widoku pogrupowanego
+import SearchResultItem from '@/components/SearchResultItem' // Do widoku wyszukiwania
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const scannerRef = useRef(null);
 
   useEffect(() => {
+    async function getProducts() {
+      setLoading(true);
+      const { data } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
+      setProducts(data || []);
+      setLoading(false);
+    }
     getProducts();
   }, []);
 
-  useEffect(() => {
-    if (isScannerOpen) {
-      if (!scannerRef.current) {
-        scannerRef.current = new Html5QrcodeScanner(qrcodeRegionId, { fps: 10, qrbox: { width: 250, height: 250 } }, false);
-      }
-      scannerRef.current.render(onScanSuccess, onScanFailure);
-    } else {
-      if (scannerRef.current && scannerRef.current.getState() === 2) {
-        scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia skanera.", error));
-      }
-    }
-    return () => {
-      if (scannerRef.current && scannerRef.current.getState() === 2) {
-        scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia skanera przy odmontowaniu.", error));
-      }
-    };
-  }, [isScannerOpen]);
-
-  function onScanSuccess(decodedText) { setSearchTerm(decodedText); setIsScannerOpen(false); }
-  function onScanFailure(error) {}
-
-  async function getProducts() {
-    setLoading(true);
-    const { data, error } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
-    if (error) {
-      console.error("Błąd pobierania produktów:", error);
-    } else {
-      setProducts(data || []);
-    }
-    setLoading(false);
-  }
-
-  // Logika filtrowania - teraz zwraca płaską listę
   const filteredProducts = useMemo(() => {
-    if (!searchTerm) {
-      return []; // Jeśli nie ma wyszukiwania, nie filtrujemy tutaj
-    }
+    if (!searchTerm) return [];
     return products.filter(product => {
       const searchTermLower = searchTerm.toLowerCase();
       const podkategoria = product.podkategoria || '';
@@ -70,7 +37,6 @@ export default function Dashboard() {
     });
   }, [products, searchTerm]);
 
-  // Logika grupowania - działa na PEŁNEJ liście produktów
   const groupedProducts = useMemo(() => {
     return products.reduce((acc, product) => {
       const category = product.kategoria;
@@ -82,19 +48,17 @@ export default function Dashboard() {
     }, {});
   }, [products]);
 
-  // Decydujemy, co renderować
   const renderContent = () => {
     if (loading) {
       return <p className="text-center py-10">Ładowanie...</p>;
     }
 
-    // --- KLUCZOWA LOGIKA ---
-    // Jeśli użytkownik coś wpisał w wyszukiwarkę, pokaż płaską listę wyników
     if (searchTerm) {
       return (
         <div className="flex flex-col gap-2">
           {filteredProducts.length > 0 ? (
-            filteredProducts.map(product => <ProductListItem key={product.id} product={product} />)
+            // Używamy nowego, prostego komponentu do wyników wyszukiwania
+            filteredProducts.map(product => <SearchResultItem key={product.id} product={product} />)
           ) : (
             <p className="text-center text-muted-foreground py-10">Nie znaleziono produktów.</p>
           )}
@@ -102,7 +66,6 @@ export default function Dashboard() {
       );
     }
 
-    // Domyślnie (gdy wyszukiwarka jest pusta), pokaż widok pogrupowany
     return (
       <Accordion type="multiple" className="w-full">
         {Object.entries(groupedProducts).map(([category, subcategories]) => (
@@ -133,20 +96,15 @@ export default function Dashboard() {
       <Card>
         <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <CardTitle className="text-2xl">Aktualny Stan Magazynu</CardTitle>
-          <div className="flex w-full md:w-auto gap-2">
+          <div className="w-full max-w-sm">
             <Input
               placeholder="Szukaj..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full max-w-sm"
             />
-            <Button variant="secondary" onClick={() => setIsScannerOpen(prev => !prev)}>
-              {isScannerOpen ? "Zamknij Skaner" : "Skanuj QR"}
-            </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {isScannerOpen && <div id={qrcodeRegionId} className="w-full my-4"></div>}
           {renderContent()}
         </CardContent>
       </Card>
