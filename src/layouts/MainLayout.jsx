@@ -1,3 +1,5 @@
+// src/layouts/MainLayout.jsx
+
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
 import { Menu } from 'lucide-react';

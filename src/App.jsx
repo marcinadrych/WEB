@@ -1,3 +1,5 @@
+// POPRAWIONY App.jsx
+
 import { useEffect, useState } from 'react';
 import { Routes, Route } from 'react-router-dom';
 import { supabase } from './supabaseClient';
@@ -12,46 +14,35 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Sprawdzamy sesję na starcie
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setLoading(false);
     });
-
-    // Nasłuchujemy na zmiany
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
     });
-
-    return () => {
-      subscription.unsubscribe();
-    };
+    return () => subscription.unsubscribe();
   }, []);
 
   if (loading) {
-    return (
-      <div className="dark min-h-screen flex items-center justify-center">
-        <p>Ładowanie...</p>
-      </div>
-    );
+    return <div className="dark min-h-screen flex items-center justify-center"><p>Ładowanie...</p></div>;
   }
 
   return (
     <div className="dark min-h-screen bg-background text-foreground">
       <Routes>
         {session ? (
-          // Jeśli jest sesja, przekazujemy kontrolę do MainLayout
+          // Jeśli jest sesja, MainLayout przejmuje cały routing
           <Route path="/*" element={<MainLayout />} />
         ) : (
-          // Jeśli nie ma sesji, mamy tylko dwie publiczne strony
+          // Jeśli nie ma sesji, mamy tylko strony publiczne
           <>
             <Route path="/update-password" element={<UpdatePassword />} />
             <Route path="*" element={<Auth />} />
           </>
         )}
       </Routes>
-      
-      {/* Toaster jest teraz na zewnątrz, więc działa zawsze */}
+      {/* Toaster jest na zewnątrz, więc działa zawsze */}
       <Toaster />
     </div>
   );
