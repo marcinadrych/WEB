@@ -6,12 +6,12 @@ import { Menu } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-// Importujemy wszystkie strony, które ten layout będzie renderował
+// Importujemy wszystkie strony, które ten layout może renderować
 import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
 import EditProduct from '@/pages/EditProduct';
-import QRPage from '@/pages/QRPage'; 
+import QRPage from '@/pages/QRPage';
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -45,7 +45,7 @@ export default function MainLayout() {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
-        {/* Zagnieżdżony router, który renderuje odpowiednią podstronę */}
+        {/* Ten zagnieżdżony router renderuje odpowiednią podstronę */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
