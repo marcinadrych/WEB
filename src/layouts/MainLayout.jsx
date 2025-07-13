@@ -41,11 +41,13 @@ export default function MainLayout() {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
+        {/* Zagnieżdżony router renderuje odpowiednią stronę */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
+          <Route path="/qr" element={<QRPage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
