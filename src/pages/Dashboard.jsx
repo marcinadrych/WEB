@@ -90,7 +90,7 @@ export default function Dashboard() {
                           <AccordionContent className="p-0 pl-4 border-l">
                             <Accordion type="single" collapsible className="w-full">
                               {productsInCategory.map((product) => (
-                                <div key={product.id}>{product.nazwa} - {product.ilosc}</div>
+                                <ProductListItem key={product.id} product={product} />
                               ))}
                             </Accordion>
                           </AccordionContent>
