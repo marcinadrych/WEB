@@ -1,12 +1,10 @@
-// src/pages/Dashboard.jsx - Wersja z Płaską Listą i Szybkim Wyszukiwaniem
-
 import { useState, useEffect, useRef } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import ProductListItem from '@/components/ProductListItem' // Nasz komponent wiersza
+import ProductListItem from '@/components/ProductListItem'
 
 const qrcodeRegionId = "html5qr-code-full-region";
 
@@ -14,8 +12,6 @@ export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // Stany dla skanera
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const scannerRef = useRef(null);
 
@@ -23,7 +19,6 @@ export default function Dashboard() {
     getProducts();
   }, []);
 
-  // UseEffect do zarządzania skanerem
   useEffect(() => {
     if (isScannerOpen) {
       if (!scannerRef.current) {
@@ -43,7 +38,7 @@ export default function Dashboard() {
   }, [isScannerOpen]);
 
   function onScanSuccess(decodedText) { setSearchTerm(decodedText); setIsScannerOpen(false); }
-  function onScanFailure(error) { /* puste */ }
+  function onScanFailure(error) {}
 
   async function getProducts() {
     setLoading(true);
@@ -56,20 +51,15 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  // --- NOWA, PROSTA LOGIKA FILTROWANIA ---
   const filteredProducts = products.filter(product => {
-    // Jeśli nie ma wyszukiwania, pokaż wszystko
     if (!searchTerm) return true;
-
     const searchTermLower = searchTerm.toLowerCase();
     const podkategoria = product.podkategoria || '';
-    
-    // Zwróć prawdę, jeśli którykolwiek warunek jest spełniony
     return (
       product.nazwa.toLowerCase().includes(searchTermLower) ||
       product.kategoria.toLowerCase().includes(searchTermLower) ||
       podkategoria.toLowerCase().includes(searchTermLower) ||
-      String(product.id) === searchTerm // Kluczowe dla skanera QR
+      String(product.id) === searchTerm
     );
   });
 
@@ -85,23 +75,18 @@ export default function Dashboard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-sm"
             />
-            {/* PRZYWRÓCONY PRZYCISK SKANERA */}
             <Button variant="secondary" onClick={() => setIsScannerOpen(prev => !prev)}>
               {isScannerOpen ? "Zamknij Skaner" : "Skanuj QR"}
             </Button>
           </div>
         </CardHeader>
         <CardContent>
-          {/* KONTENER DLA WIDOKU SKANERA */}
           {isScannerOpen && <div id={qrcodeRegionId} className="w-full my-4"></div>}
           
-          {/* --- NOWY, PROSTY WIDOK LISTY --- */}
           <div className="flex flex-col gap-2">
             {loading ? (
               <p className="text-center py-10">Ładowanie...</p>
             ) : filteredProducts.length > 0 ? (
-              // Jeśli coś wyszukujemy, pokazujemy płaską listę wyników
-              // Jeśli nie, moglibyśmy pokazywać pogrupowaną listę (ale na razie upraszczamy)
               filteredProducts.map((product) => (
                 <ProductListItem key={product.id} product={product} />
               ))
