@@ -10,15 +10,17 @@ import {
   CardContent,
   CardDescription,
   CardHeader,
- CardTitle,
+  CardTitle,
 } from '@/components/ui/card';
 import { useToast } from '@/components/ui/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 export default function Auth() {
   const [loading, setLoading] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const { toast } = useToast();
+  const navigate = useNavigate(); // 🔁 Dodano
 
   const handleLogin = async (event) => {
     event.preventDefault();
@@ -35,6 +37,9 @@ export default function Auth() {
         description: 'Nieprawidłowy e-mail lub hasło.',
         variant: 'destructive',
       });
+    } else {
+      // 🔁 Po udanym logowaniu – przekieruj
+      navigate('/');
     }
 
     setLoading(false);
