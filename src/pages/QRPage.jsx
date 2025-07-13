@@ -1,5 +1,5 @@
 import { useLocation } from 'react-router-dom';
-import qrcode from 'qrcode.react'; // Importujemy całą bibliotekę pod inną nazwą
+import { QRCode } from 'qrcode.react';
 import { Button } from "@/components/ui/button";
 
 const QRCode = qrcode.default || qrcode;
