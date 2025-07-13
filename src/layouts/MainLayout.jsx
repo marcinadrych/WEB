@@ -1,17 +1,19 @@
 // src/layouts/MainLayout.jsx
 
-import { Routes, Route, Link } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
-import { Menu } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import Dashboard from '@/pages/Dashboard'
-import AddProduct from '@/pages/AddProduct'
-import ZmienStan from '@/pages/ZmienStan'
-import EditProduct from '@/pages/EditProduct'
-import UpdatePassword from '@/pages/UpdatePassword'
+import { Routes, Route, Link } from 'react-router-dom';
+import { useAuth } from '@/context/AuthContext';
+import { Menu } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
-export default function MainLayout() {
+// Importujemy wszystkie strony, które ten layout będzie renderował
+import Dashboard from '@/pages/Dashboard';
+import AddProduct from '@/pages/AddProduct';
+import ZmienStan from '@/pages/ZmienStan';
+import EditProduct from '@/pages/EditProduct';
+import QRPage from '@/pages/QRPage'; // <<< NOWY IMPORT
+
+export default function MainLayout({ children }) {
   const { signOut } = useAuth();
 
   return (
@@ -39,12 +41,13 @@ export default function MainLayout() {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
+        {/* Zagnieżdżony router renderuje odpowiednią stronę */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          <Route path="/update-password" element={<UpdatePassword />} />
+          <Route path="/qr" element={<QRPage />} /> {/* <<< NOWA ŚCIEŻKA */}
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>

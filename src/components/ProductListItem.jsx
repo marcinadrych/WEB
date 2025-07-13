@@ -1,21 +1,12 @@
-import { Link } from 'react-router-dom'
-import * as QRCode from 'qrcode.react'
-import { Button } from "@/components/ui/button"
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
-import {
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion"
+// src/components/ProductListItem.jsx
+
+import { Link } from 'react-router-dom';
+import { Button } from "@/components/ui/button";
+import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 
 export default function ProductListItem({ product }) {
-  const qrCodeValue = String(product.id);
+  // Tworzymy dynamiczny link do naszej nowej strony QR
+  const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
 
   return (
     <AccordionItem value={`item-${product.id}`} key={product.id} className="border-b last:border-b-0">
@@ -40,25 +31,10 @@ export default function ProductListItem({ product }) {
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
-            
-            <Dialog>
-              <DialogTrigger asChild>
-                <Button variant="outline" size="sm">Pokaż QR</Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Kod QR dla: {product.nazwa}</DialogTitle>
-                </DialogHeader>
-                <div className="flex items-center justify-center p-6">
-                  <QRCode.default
-                    value={qrCodeValue}
-                    size={256}
-                    level={"H"}
-                    includeMargin={true}
-                  />
-                </div>
-              </DialogContent>
-            </Dialog>
+            {/* Zmieniamy przycisk "Pokaż QR" na link otwierający nową kartę */}
+            <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" size="sm">Pokaż QR</Button>
+            </a>
             
             <Link to={`/edytuj-produkt/${product.id}`}>
               <Button size="sm">Edytuj</Button>
