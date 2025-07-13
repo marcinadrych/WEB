@@ -1,12 +1,12 @@
-// src/pages/Dashboard.jsx - Ostateczna wersja z dwoma widokami
+// src/pages/Dashboard.jsx - Wersja z Inteligentnym Wyszukiwaniem
 
 import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import ProductListItem from '@/components/ProductListItem' // Do widoku pogrupowanego
-import SearchResultItem from '@/components/SearchResultItem' // Do widoku wyszukiwania
+import ProductListItem from '@/components/ProductListItem'
+import SearchResultItem from '@/components/SearchResultItem'
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
@@ -23,20 +23,30 @@ export default function Dashboard() {
     getProducts();
   }, []);
 
+  // --- NOWA, INTELIGENTNA LOGIKA FILTROWANIA ---
   const filteredProducts = useMemo(() => {
-    if (!searchTerm) return [];
+    if (!searchTerm.trim()) {
+      return []; // Jeśli wyszukiwarka jest pusta (lub same spacje), nie pokazuj wyników
+    }
+
+    // 1. Dzielimy zapytanie użytkownika na pojedyncze słowa kluczowe
+    const searchKeywords = searchTerm.toLowerCase().split(' ').filter(Boolean);
+
     return products.filter(product => {
-      const searchTermLower = searchTerm.toLowerCase();
-      const podkategoria = product.podkategoria || '';
-      return (
-        product.nazwa.toLowerCase().includes(searchTermLower) ||
-        product.kategoria.toLowerCase().includes(searchTermLower) ||
-        podkategoria.toLowerCase().includes(searchTermLower) ||
-        String(product.id) === searchTerm
-      );
+      // 2. Tworzymy jeden długi tekst do przeszukiwania dla każdego produktu
+      const productText = [
+        product.nazwa,
+        product.kategoria,
+        product.podkategoria || ''
+      ].join(' ').toLowerCase();
+      
+      // 3. Sprawdzamy, czy WSZYSTKIE słowa kluczowe z zapytania
+      //    znajdują się w tekście produktu.
+      return searchKeywords.every(keyword => productText.includes(keyword));
     });
   }, [products, searchTerm]);
 
+  // Logika grupowania pozostaje bez zmian
   const groupedProducts = useMemo(() => {
     return products.reduce((acc, product) => {
       const category = product.kategoria;
@@ -53,11 +63,10 @@ export default function Dashboard() {
       return <p className="text-center py-10">Ładowanie...</p>;
     }
 
-    if (searchTerm) {
+    if (searchTerm.trim()) {
       return (
         <div className="flex flex-col gap-2">
           {filteredProducts.length > 0 ? (
-            // Używamy nowego, prostego komponentu do wyników wyszukiwania
             filteredProducts.map(product => <SearchResultItem key={product.id} product={product} />)
           ) : (
             <p className="text-center text-muted-foreground py-10">Nie znaleziono produktów.</p>
