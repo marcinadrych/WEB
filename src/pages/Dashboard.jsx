@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { supabase } from '@/supabaseClient';
-import * as QRCode from 'qrcode.react';
+import QRCode from 'qrcode'; // Importujemy nową bibliotekę
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { Link } from 'react-router-dom';
 import { Input } from "@/components/ui/input";
