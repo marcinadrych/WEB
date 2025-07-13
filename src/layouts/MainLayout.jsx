@@ -11,7 +11,7 @@ import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
 import EditProduct from '@/pages/EditProduct';
-import QRPage from '@/pages/QRPage'; 
+import QRPage from '@/pages/QRPage';
 
 export default function MainLayout() {
   const { signOut } = useAuth();
@@ -21,7 +21,7 @@ export default function MainLayout() {
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto flex h-16 items-center justify-between">
           <Link to="/" className="text-xl font-bold">
-            Magazyn
+            Magazyn Adrych
           </Link>
           
           {/* Nawigacja na duże ekrany */}
