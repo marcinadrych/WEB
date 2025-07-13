@@ -1,14 +1,13 @@
 // src/App.jsx
-
 import { Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
-import { useAuth } from './context/AuthContext' // Używamy naszego hooka
+import { useAuth } from './context/AuthContext'
 import MainLayout from './layouts/MainLayout'
-import AuthPage from './pages/Auth' // Pamiętaj o zmianie nazwy pliku
+import AuthPage from './pages/AuthPage'
 import UpdatePassword from './pages/UpdatePassword'
 
 export default function App() {
-  const { session } = useAuth(); // Pobieramy sesję z kontekstu
+  const { session } = useAuth();
 
   return (
     <div className="dark min-h-screen bg-background text-foreground">
