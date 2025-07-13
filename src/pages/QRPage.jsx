@@ -1,6 +1,8 @@
 import { useLocation } from 'react-router-dom';
-import * as QRCode from 'qrcode.react';
+import qrcode from 'qrcode.react'; // Importujemy całą bibliotekę pod inną nazwą
 import { Button } from "@/components/ui/button";
+
+const QRCode = qrcode.default || qrcode;
 
 export default function QRPage() {
   const location = useLocation();
@@ -15,7 +17,7 @@ export default function QRPage() {
       </h1>
       <div className="bg-white p-6 rounded-lg">
         {qrValue ? (
-          <QRCode.default
+          <QRCode
             value={qrValue}
             size={256}
             level={"H"}
