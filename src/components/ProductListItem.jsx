@@ -31,7 +31,6 @@ export default function ProductListItem({ product }) {
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
-            {/* Zmieniamy przycisk "Pokaż QR" na link otwierający nową kartę */}
             <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">Pokaż QR</Button>
             </a>

@@ -11,9 +11,9 @@ import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
 import EditProduct from '@/pages/EditProduct';
-import QRPage from '@/pages/QRPage'; // <<< NOWY IMPORT
+import QRPage from '@/pages/QRPage'; 
 
-export default function MainLayout({ children }) {
+export default function MainLayout() {
   const { signOut } = useAuth();
 
   return (
@@ -41,13 +41,12 @@ export default function MainLayout({ children }) {
         </div>
       </header>
       <main className="container mx-auto p-4 md:p-8">
-        {/* Zagnieżdżony router renderuje odpowiednią stronę */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
-          <Route path="/qr" element={<QRPage />} /> {/* <<< NOWA ŚCIEŻKA */}
+          <Route path="/qr" element={<QRPage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
