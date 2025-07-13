@@ -1,9 +1,10 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '@/supabaseClient'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
 import ProductListItem from '@/components/ProductListItem'
 
 const qrcodeRegionId = "html5qr-code-full-region";
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const scannerRef = useRef(null);
 
@@ -42,7 +44,7 @@ export default function Dashboard() {
 
   async function getProducts() {
     setLoading(true);
-    const { data, error } = await supabase.from('produkty').select('*').order('nazwa');
+    const { data, error } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
     if (error) {
       console.error("Błąd pobierania produktów:", error);
     } else {
@@ -51,17 +53,80 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  const filteredProducts = products.filter(product => {
-    if (!searchTerm) return true;
-    const searchTermLower = searchTerm.toLowerCase();
-    const podkategoria = product.podkategoria || '';
+  // Logika filtrowania - teraz zwraca płaską listę
+  const filteredProducts = useMemo(() => {
+    if (!searchTerm) {
+      return []; // Jeśli nie ma wyszukiwania, nie filtrujemy tutaj
+    }
+    return products.filter(product => {
+      const searchTermLower = searchTerm.toLowerCase();
+      const podkategoria = product.podkategoria || '';
+      return (
+        product.nazwa.toLowerCase().includes(searchTermLower) ||
+        product.kategoria.toLowerCase().includes(searchTermLower) ||
+        podkategoria.toLowerCase().includes(searchTermLower) ||
+        String(product.id) === searchTerm
+      );
+    });
+  }, [products, searchTerm]);
+
+  // Logika grupowania - działa na PEŁNEJ liście produktów
+  const groupedProducts = useMemo(() => {
+    return products.reduce((acc, product) => {
+      const category = product.kategoria;
+      const subcategory = product.podkategoria || 'Bez podkategorii';
+      if (!acc[category]) acc[category] = {};
+      if (!acc[category][subcategory]) acc[category][subcategory] = [];
+      acc[category][subcategory].push(product);
+      return acc;
+    }, {});
+  }, [products]);
+
+  // Decydujemy, co renderować
+  const renderContent = () => {
+    if (loading) {
+      return <p className="text-center py-10">Ładowanie...</p>;
+    }
+
+    // --- KLUCZOWA LOGIKA ---
+    // Jeśli użytkownik coś wpisał w wyszukiwarkę, pokaż płaską listę wyników
+    if (searchTerm) {
+      return (
+        <div className="flex flex-col gap-2">
+          {filteredProducts.length > 0 ? (
+            filteredProducts.map(product => <ProductListItem key={product.id} product={product} />)
+          ) : (
+            <p className="text-center text-muted-foreground py-10">Nie znaleziono produktów.</p>
+          )}
+        </div>
+      );
+    }
+
+    // Domyślnie (gdy wyszukiwarka jest pusta), pokaż widok pogrupowany
     return (
-      product.nazwa.toLowerCase().includes(searchTermLower) ||
-      product.kategoria.toLowerCase().includes(searchTermLower) ||
-      podkategoria.toLowerCase().includes(searchTermLower) ||
-      String(product.id) === searchTerm
+      <Accordion type="multiple" className="w-full">
+        {Object.entries(groupedProducts).map(([category, subcategories]) => (
+          <AccordionItem value={`category-${category}`} key={category}>
+            <AccordionTrigger className="text-xl font-semibold p-4 hover:no-underline">{category}</AccordionTrigger>
+            <AccordionContent className="p-0 pl-4 border-l">
+              <Accordion type="multiple" className="w-full">
+                {Object.entries(subcategories).map(([subcategory, productsInCategory]) => (
+                  <AccordionItem value={`subcategory-${subcategory}`} key={subcategory}>
+                    <AccordionTrigger className="text-lg font-medium p-3 hover:no-underline">{subcategory}</AccordionTrigger>
+                    <AccordionContent className="p-0 pl-4 border-l">
+                      {productsInCategory.map((product) => (
+                        <ProductListItem key={product.id} product={product} />
+                      ))}
+                    </AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
     );
-  });
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -82,20 +147,7 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>
           {isScannerOpen && <div id={qrcodeRegionId} className="w-full my-4"></div>}
-          
-          <div className="flex flex-col gap-2">
-            {loading ? (
-              <p className="text-center py-10">Ładowanie...</p>
-            ) : filteredProducts.length > 0 ? (
-              filteredProducts.map((product) => (
-                <ProductListItem key={product.id} product={product} />
-              ))
-            ) : (
-              <p className="text-center text-muted-foreground py-10">
-                {searchTerm ? "Nie znaleziono produktów." : "Brak produktów w magazynie."}
-              </p>
-            )}
-          </div>
+          {renderContent()}
         </CardContent>
       </Card>
     </div>
