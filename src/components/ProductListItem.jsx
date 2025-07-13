@@ -1,13 +1,21 @@
-import { useState } from 'react' // Dodajemy useState do zarządzania dialogiem
 import { Link } from 'react-router-dom'
-import * as QRCode from 'qrcode.react' // <<< Używamy poprawnego importu
+import * as QRCode from 'qrcode.react'
 import { Button } from "@/components/ui/button"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
-import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog"
+import {
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion"
 
 export default function ProductListItem({ product }) {
-  // Stan do kontrolowania, czy okno dialogowe jest otwarte
-  const [isDialogOpen, setIsDialogOpen] = useState(false)
+  const qrCodeValue = String(product.id);
 
   return (
     <AccordionItem value={`item-${product.id}`} key={product.id} className="border-b last:border-b-0">
@@ -32,8 +40,8 @@ export default function ProductListItem({ product }) {
             </div>
           )}
           <div className="flex gap-2 justify-end pt-2">
-            {/* Owijamy wszystko w komponent Dialog, który zarządza stanem otwarcia */}
-            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+            
+            <Dialog>
               <DialogTrigger asChild>
                 <Button variant="outline" size="sm">Pokaż QR</Button>
               </DialogTrigger>
@@ -42,9 +50,8 @@ export default function ProductListItem({ product }) {
                   <DialogTitle>Kod QR dla: {product.nazwa}</DialogTitle>
                 </DialogHeader>
                 <div className="flex items-center justify-center p-6">
-                  {/* Poprawione użycie komponentu QRCode */}
-                  <QRCode.default 
-                    value={String(product.id)}
+                  <QRCode.default
+                    value={qrCodeValue}
                     size={256}
                     level={"H"}
                     includeMargin={true}
@@ -52,6 +59,7 @@ export default function ProductListItem({ product }) {
                 </div>
               </DialogContent>
             </Dialog>
+            
             <Link to={`/edytuj-produkt/${product.id}`}>
               <Button size="sm">Edytuj</Button>
             </Link>
