@@ -1,14 +1,34 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { supabase } from '@/supabaseClient'
-import { Html5QrcodeScanner } from 'html5-qrcode'
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import ProductListItem from '@/components/ProductListItem'
-import SearchResultItem from '@/components/SearchResultItem'
+// src/pages/Dashboard.jsx
 
-const qrcodeRegionId = "html5qr-code-full-region";
+import { useState, useEffect, useRef } from 'react';
+import { supabase } from '@/supabaseClient';
+import * as QRCode from 'qrcode.react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Link } from 'react-router-dom';
+
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+
+const qrcodeRegionId = 'html5qr-code-full-region';
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
@@ -18,126 +38,190 @@ export default function Dashboard() {
   const scannerRef = useRef(null);
 
   useEffect(() => {
-    async function getProducts() {
-      setLoading(true);
-      const { data } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
-      setProducts(data || []);
-      setLoading(false);
-    }
     getProducts();
   }, []);
 
   useEffect(() => {
     if (isScannerOpen) {
-      if (!scannerRef.current) { scannerRef.current = new Html5QrcodeScanner(qrcodeRegionId, { fps: 10, qrbox: { width: 250, height: 250 } }, false); }
+      if (!scannerRef.current) {
+        scannerRef.current = new Html5QrcodeScanner(
+          qrcodeRegionId,
+          {
+            fps: 10,
+            qrbox: { width: 250, height: 250 },
+          },
+          false
+        );
+      }
       scannerRef.current.render(onScanSuccess, onScanFailure);
     } else {
-      if (scannerRef.current && scannerRef.current.getState() === 2) { scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia skanera.", error)); }
+      if (scannerRef.current && scannerRef.current.getState() === 2) {
+        scannerRef.current.clear().catch((error) =>
+          console.error('Błąd czyszczenia skanera.', error)
+        );
+      }
     }
-    return () => { if (scannerRef.current && scannerRef.current.getState() === 2) { scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia skanera.", error)); } };
+
+    return () => {
+      if (scannerRef.current && scannerRef.current.getState() === 2) {
+        scannerRef.current.clear().catch((error) =>
+          console.error('Błąd czyszczenia skanera przy odmontowaniu.', error)
+        );
+      }
+    };
   }, [isScannerOpen]);
 
-  function onScanSuccess(decodedText) { setSearchTerm(decodedText); setIsScannerOpen(false); }
-  function onScanFailure(error) {}
+  function onScanSuccess(decodedText) {
+    setSearchTerm(decodedText);
+    setIsScannerOpen(false);
+  }
 
-  // --- POPRAWIONA I KOMPLETNA LOGIKA FILTROWANIA ---
-  const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return [];
+  function onScanFailure(error) {
+    // brak logowania błędów – można dodać jeśli potrzebne
+  }
 
-    const searchKeywords = searchTerm.toLowerCase().split(' ').filter(Boolean);
+  async function getProducts() {
+    setLoading(true);
+    const { data } = await supabase
+      .from('produkty')
+      .select('*')
+      .order('nazwa', { ascending: true });
+    setProducts(data || []);
+    setLoading(false);
+  }
 
-    return products.filter(product => {
-      // Sprawdzamy, czy wyszukiwana fraza to DOKŁADNIE ID produktu (ze skanera)
-      if (String(product.id) === searchTerm) {
-        return true;
-      }
-      
-      // Jeśli nie, robimy inteligentne wyszukiwanie tekstowe
-      const productText = [
-        product.nazwa,
-        product.kategoria,
-        product.podkategoria || ''
-      ].join(' ').toLowerCase();
-      
-      return searchKeywords.every(keyword => productText.includes(keyword));
-    });
-  }, [products, searchTerm]);
-
-
-  const groupedProducts = useMemo(() => {
-    // Ta logika pozostaje bez zmian
-    return products.reduce((acc, product) => {
-      const category = product.kategoria;
-      const subcategory = product.podkategoria || 'Bez podkategorii';
-      if (!acc[category]) acc[category] = {};
-      if (!acc[category][subcategory]) acc[category][subcategory] = [];
-      acc[category][subcategory].push(product);
-      return acc;
-    }, {});
-  }, [products]);
-
-  const renderContent = () => {
-    if (loading) return <p className="text-center py-10">Ładowanie...</p>;
-
-    if (searchTerm.trim()) {
-      return (
-        <div className="flex flex-col gap-2">
-          {filteredProducts.length > 0 ? (
-            filteredProducts.map(product => <SearchResultItem key={product.id} product={product} />)
-          ) : (
-            <p className="text-center text-muted-foreground py-10">Nie znaleziono produktów.</p>
-          )}
-        </div>
-      );
-    }
-
+  const filteredProducts = products.filter((product) => {
+    const searchTermLower = searchTerm.toLowerCase();
+    const podkategoria = product.podkategoria || '';
     return (
-      <Accordion type="multiple" className="w-full">
-        {Object.entries(groupedProducts).map(([category, subcategories]) => (
-          <AccordionItem value={`category-${category}`} key={category}>
-            <AccordionTrigger className="text-xl font-semibold p-4 hover:no-underline">{category}</AccordionTrigger>
-            <AccordionContent className="p-0 pl-4 border-l">
-              <Accordion type="multiple" className="w-full">
-                {Object.entries(subcategories).map(([subcategory, productsInCategory]) => (
-                  <AccordionItem value={`subcategory-${subcategory}`} key={subcategory}>
-                    <AccordionTrigger className="text-lg font-medium p-3 hover:no-underline">{subcategory}</AccordionTrigger>
-                    <AccordionContent className="p-0 pl-4 border-l">
-                      {productsInCategory.map((product) => (
-                        <ProductListItem key={product.id} product={product} />
-                      ))}
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </AccordionContent>
-          </AccordionItem>
-        ))}
-      </Accordion>
+      product.nazwa.toLowerCase().includes(searchTermLower) ||
+      product.kategoria.toLowerCase().includes(searchTermLower) ||
+      podkategoria.toLowerCase().includes(searchTermLower) ||
+      String(product.id) === searchTerm
     );
-  };
+  });
 
   return (
     <div className="flex flex-col gap-6">
       <Card>
         <CardHeader className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <CardTitle className="text-2xl">Aktualny Stan Magazynu</CardTitle>
+          <CardTitle className="text-3xl">
+            Aktualny Stan Magazynu
+          </CardTitle>
           <div className="flex w-full md:w-auto gap-2">
             <Input
-              placeholder="Szukaj lub skanuj..."
+              placeholder="Szukaj..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-sm"
             />
-            <Button variant="secondary" onClick={() => setIsScannerOpen(prev => !prev)}>
-              {isScannerOpen ? "Zamknij Skaner" : "Skanuj QR"}
+            <Button
+              variant="secondary"
+              onClick={() => setIsScannerOpen((prev) => !prev)}
+            >
+              {isScannerOpen ? 'Zamknij Skaner' : 'Skanuj QR'}
             </Button>
           </div>
         </CardHeader>
+
         <CardContent>
-          {isScannerOpen && <div id={qrcodeRegionId} className="w-full my-4"></div>}
-          {renderContent()}
+          {isScannerOpen && (
+            <div id={qrcodeRegionId} className="w-full my-4" />
+          )}
+
+          {loading ? (
+            <p className="text-center py-10">Ładowanie...</p>
+          ) : filteredProducts.length > 0 ? (
+            <Accordion
+              type="single"
+              collapsible
+              className="w-full border rounded-lg"
+            >
+              {filteredProducts.map((product) => (
+                <AccordionItem
+                  value={`item-${product.id}`}
+                  key={product.id}
+                  className="border-b last:border-b-0"
+                >
+                  <AccordionTrigger className="hover:no-underline p-4 text-lg">
+                    <div className="flex justify-between items-center w-full">
+                      <span className="font-medium text-xl text-left">
+                        {product.nazwa}
+                      </span>
+                      <span
+                        className={`font-bold text-2xl ${
+                          product.ilosc < 5
+                            ? 'text-red-500'
+                            : 'text-green-500'
+                        }`}
+                      >
+                        {product.ilosc} {product.jednostka}
+                      </span>
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="flex flex-col gap-4 p-4 border-t bg-muted/50 text-base">
+                      <div className="grid grid-cols-2 gap-4 text-lg">
+                        <div>
+                          <strong>Kategoria:</strong>
+                          <br />
+                          {product.kategoria}
+                        </div>
+                        <div>
+                          <strong>Podkategoria:</strong>
+                          <br />
+                          {product.podkategoria || '---'}
+                        </div>
+                      </div>
+
+                      {product.uwagi && (
+                        <div className="text-lg">
+                          <strong>Uwagi:</strong>
+                          <p className="text-muted-foreground whitespace-pre-wrap">
+                            {product.uwagi}
+                          </p>
+                        </div>
+                      )}
+
+                      <div className="flex gap-2 justify-end pt-2">
+                        <Dialog>
+                          <DialogTrigger asChild>
+                            <Button variant="outline" size="sm">
+                              Pokaż QR
+                            </Button>
+                          </DialogTrigger>
+                          <DialogContent className="sm:max-w-md">
+                            <DialogHeader>
+                              <DialogTitle>
+                                Kod QR dla: {product.nazwa}
+                              </DialogTitle>
+                            </DialogHeader>
+                            <div className="flex items-center justify-center p-6">
+                              <QRCode.default
+                                value={String(product.id)}
+                                size={256}
+                                level="H"
+                                includeMargin={true}
+                              />
+                            </div>
+                          </DialogContent>
+                        </Dialog>
+                        <Link to={`/edytuj-produkt/${product.id}`}>
+                          <Button size="sm">Edytuj</Button>
+                        </Link>
+                      </div>
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <p className="text-center text-muted-foreground py-10">
+              Nie znaleziono produktów.
+            </p>
+          )}
         </CardContent>
       </Card>
     </div>
-  )
+  );
 }
