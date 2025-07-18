@@ -1,14 +1,17 @@
+// src/pages/Dashboard.jsx
+
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '@/supabaseClient'
-import { Html5QrcodeScanner } from 'html5-qrcode'
+// --- ZMIANA NR 1: Zmieniamy import, żeby mieć dostęp do bardziej zaawansowanych opcji ---
+import { Html5Qrcode } from 'html5-qrcode'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card' // Dodajemy CardDescription
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" // Dodajemy Dialog
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import ProductListItem from '@/components/ProductListItem'
 import SearchResultItem from '@/components/SearchResultItem'
-import { QrCode } from 'lucide-react' // Dodajemy ikonę
+import { QrCode } from 'lucide-react'
 
 const qrcodeRegionId = "html5qr-code-full-region";
 
@@ -16,8 +19,6 @@ export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  
-  // --- ZMIANA NR 1: Zmieniamy nazwę stanu dla jasności ---
   const [isScannerDialogOpen, setIsScannerDialogOpen] = useState(false);
   const scannerRef = useRef(null);
 
@@ -25,36 +26,52 @@ export default function Dashboard() {
     getProducts();
   }, []);
 
+  // --- ZMIANA NR 2: Zastępujemy całą logikę skanera nową, ulepszoną wersją ---
   useEffect(() => {
-    if (!isScannerDialogOpen) {
-      return;
-    }
-    
-    // --- KLUCZOWA POPRAWKA ---
-    // Czekamy ułamek sekundy (100ms), żeby React zdążył wyrenderować Dialog
-    const timer = setTimeout(() => {
-      const scanner = new Html5QrcodeScanner(qrcodeRegionId, { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+    if (!isScannerDialogOpen) return;
+
+    const startScanner = () => {
+      const element = document.getElementById(qrcodeRegionId);
+      if (!element) return;
+
+      // Konfiguracja skanera (bezpośrednio z dokumentacji)
+      const config = {
+        fps: 10,
+        qrbox: { width: 250, height: 250 },
+      };
+      
+      const scanner = new Html5Qrcode(qrcodeRegionId, false);
       scannerRef.current = scanner;
 
-    function onScanSuccess(decodedText) {
-      setSearchTerm(decodedText);
-      setIsScannerDialogOpen(false); // Zamykamy dialog po sukcesie
-    }
-    function onScanFailure(error) {}
+      const onScanSuccess = (decodedText) => {
+        setSearchTerm(decodedText);
+        setIsScannerDialogOpen(false);
+      };
+      const onScanFailure = (error) => {};
+      
+      // Uruchamiamy skaner, prosząc o tylną kamerę
+      scanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
+        .catch(err => {
+          // Jeśli nie ma tylnej kamery, próbuj z jakąkolwiek
+          console.warn("Nie udało się znaleźć tylnego aparatu, próbuję z domyślnym:", err);
+          scanner.start(undefined, config, onScanSuccess, onScanFailure)
+            .catch(err => console.error("Nie udało się uruchomić skanera.", err));
+        });
+    };
 
-    scanner.render(onScanSuccess, onScanFailure);
-  }, 100);
+    // Używamy setTimeout, żeby dać Reactowi czas na wyrenderowanie okna
+    const timer = setTimeout(startScanner, 100);
 
+    // Funkcja czyszcząca, zatrzymuje kamerę po zamknięciu okna
     return () => {
-      if (scannerRef.current && scannerRef.current.getState() === 2) {
-        scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia skanera.", error));
+      clearTimeout(timer);
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().catch(error => console.error("Błąd zatrzymywania skanera.", error));
       }
     };
   }, [isScannerDialogOpen]);
 
-  function onScanSuccess(decodedText) { setSearchTerm(decodedText); setIsScannerOpen(false); }
-  function onScanFailure(error) {}
-
+  // Twoja reszta kodu pozostaje nietknięta
   async function getProducts() {
     setLoading(true);
     const { data } = await supabase.from('produkty').select('*').order('kategoria').order('podkategoria').order('nazwa');
@@ -62,7 +79,6 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  // Twoja logika filtrowania i grupowania - BEZ ZMIAN
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const keywords = searchTerm.toLowerCase().split(' ').filter(Boolean);
@@ -124,7 +140,6 @@ export default function Dashboard() {
           <div className="flex w-full md:w-auto gap-2">
             <Input placeholder="Szukaj..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full max-w-sm" />
             
-            {/* --- ZMIANA NR 3: Nowy przycisk i okno dialogowe --- */}
             <Dialog open={isScannerDialogOpen} onOpenChange={setIsScannerDialogOpen}>
               <DialogTrigger asChild>
                 <Button variant="secondary">
@@ -139,11 +154,9 @@ export default function Dashboard() {
                 <div id={qrcodeRegionId} className="w-full mt-4 rounded-lg overflow-hidden"></div>
               </DialogContent>
             </Dialog>
-
           </div>
         </CardHeader>
         <CardContent>
-          {/* --- ZMIANA NR 4: Usunięcie starego kontenera skanera --- */}
           {renderContent()}
         </CardContent>
       </Card>
