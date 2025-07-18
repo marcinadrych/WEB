@@ -1,3 +1,5 @@
+// src/pages/Dashboard.jsx
+
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { supabase } from '@/supabaseClient';
 import { Input } from "@/components/ui/input";
@@ -33,17 +35,14 @@ export default function Dashboard() {
     if (!isScannerDialogOpen) {
       return;
     }
-
     const startScanner = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         streamRef.current = stream;
-        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.setAttribute("playsinline", true);
           await videoRef.current.play();
-          
           animationRef.current = requestAnimationFrame(scanTick);
         }
       } catch (err) {
@@ -51,9 +50,7 @@ export default function Dashboard() {
         setIsScannerDialogOpen(false); 
       }
     };
-
     startScanner();
-
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -63,7 +60,6 @@ export default function Dashboard() {
       }
     };
   }, [isScannerDialogOpen]);
-
 
   async function getProducts() {
     setLoading(true);
@@ -76,16 +72,34 @@ export default function Dashboard() {
     setLoading(false);
   }
 
+  // --- TO JEST JEDYNA ZMIENIONA SEKCJA W CAŁYM PLIKU ---
   const filteredProducts = useMemo(() => {
-    if (!searchTerm.trim()) return [];
-    const keywords = searchTerm.toLowerCase().split(' ').filter(Boolean);
-    return products.filter(p => {
-      if (String(p.id) === searchTerm) return true;
-      const text = [p.nazwa, p.kategoria, p.podkategoria || ''].join(' ').toLowerCase();
-      return keywords.every(k => text.includes(k));
+    const term = searchTerm.trim();
+    // Jeśli nie ma wyszukiwania, nie pokazuj płaskiej listy
+    if (!term) return []; 
+
+    // Sprawdzamy, czy wyszukiwana fraza jest LICZBĄ
+    const isSearchTermNumeric = /^\d+$/.test(term);
+    
+    return products.filter(product => {
+      // Jeśli szukamy po liczbie (z kodu QR), sprawdzaj TYLKO ID
+      if (isSearchTermNumeric) {
+        return String(product.id) === term;
+      }
+      
+      // W przeciwnym wypadku, rób inteligentne wyszukiwanie tekstowe
+      const searchKeywords = term.toLowerCase().split(' ').filter(Boolean);
+      const productText = [
+        product.nazwa,
+        product.kategoria,
+        product.podkategoria || ''
+      ].join(' ').toLowerCase();
+      
+      return searchKeywords.every(keyword => productText.includes(keyword));
     });
   }, [products, searchTerm]);
 
+  // Twoja logika grupowania jest OK, zostaje bez zmian
   const groupedProducts = useMemo(() => {
     return products.reduce((acc, p) => {
       const cat = p.kategoria;
@@ -97,22 +111,20 @@ export default function Dashboard() {
     }, {});
   }, [products]);
 
+  // Twoje funkcje scanTick i stopScanner są OK, zostają bez zmian
   const scanTick = () => {
     if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
       animationRef.current = requestAnimationFrame(scanTick);
       return;
     }
-
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
-    
     canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
     const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
     const code = jsQR(imageData.data, canvas.width, canvas.height);
-
     if (code) {
       if (beepSound) beepSound.play();
       setSearchTerm(code.data);
@@ -121,12 +133,11 @@ export default function Dashboard() {
       animationRef.current = requestAnimationFrame(scanTick);
     }
   };
-
   const stopScanner = () => {
     setIsScannerDialogOpen(false);
-    // Funkcja czyszcząca w useEffect zajmie się resztą
   };
-
+  
+  // Twoja funkcja renderContent jest OK, zostaje bez zmian
   const renderContent = () => {
     if (loading) return <p className="text-center py-10">Ładowanie...</p>;
     if (searchTerm.trim()) {
@@ -158,7 +169,8 @@ export default function Dashboard() {
       </Accordion>
     );
   };
-
+  
+  // Twój return z JSX jest OK, zostaje bez zmian
   return (
     <div className="flex flex-col gap-6">
       <Card>
@@ -171,7 +183,6 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>
       </Card>
-
       <Dialog open={isScannerDialogOpen} onOpenChange={setIsScannerDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
