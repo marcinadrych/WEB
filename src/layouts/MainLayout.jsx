@@ -1,8 +1,7 @@
 // src/layouts/MainLayout.jsx
 
-import { Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
-// --- ZMIANA NR 1: Dodajemy ikonę 'Download' ---
 import { Menu, Plus, PenSquare, PackagePlus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -12,10 +11,9 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-// --- ZMIANA NR 2: Importujemy nasz nowy hook ---
 import { usePWAInstall } from '@/hooks/usePWAInstall'; 
 
-// Strony - Twoje importy są OK
+// Importy Stron - wszystko jest OK
 import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
@@ -25,9 +23,20 @@ import UpdatePassword from '@/pages/UpdatePassword';
 
 export default function MainLayout() {
   const navigate = useNavigate();
-  
-  // --- ZMIANA NR 3: Używamy nowego hooka ---
   const { canInstall, handleInstall } = usePWAInstall();
+
+  // --- TO JEST JEDYNA ZMIANA W LOGICE ---
+  // Przenosimy tę logikę do wnętrza komponentu
+  const location = useLocation();
+  const handleLogoClick = (e) => {
+    // Jeśli już jesteśmy na stronie głównej, zapobiegamy domyślnej akcji
+    // i ręcznie przeładowujemy stronę.
+    if (location.pathname === '/') {
+      e.preventDefault(); // Zatrzymaj normalne działanie linku
+      window.location.reload(); // Odśwież stronę
+    }
+    // Jeśli jesteśmy na innej podstronie, link zadziała normalnie.
+  };
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -38,15 +47,18 @@ export default function MainLayout() {
     <>
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto flex h-16 items-center justify-between">
-          <Link to="/" className="text-xl font-bold">Magazyn</Link>
           
+          {/* --- I ZMIANA TUTAJ, w linku "Magazyn" --- */}
+          <Link to="/" onClick={handleLogoClick} className="text-xl font-bold">
+            Magazyn
+          </Link>
+
           <nav className="hidden md:flex items-center gap-4">
             <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
             <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
             <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
             <Link to="/update-password"><Button variant="secondary">Zmień Hasło</Button></Link>
             
-            {/* --- ZMIANA NR 4: Dodajemy przycisk instalacji na desktop --- */}
             {canInstall && (
               <Button onClick={handleInstall}>
                 <Download className="mr-2 h-4 w-4" /> Zainstaluj
@@ -67,7 +79,6 @@ export default function MainLayout() {
                 <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/update-password">Zmień Hasło</Link></DropdownMenuItem>
                 
-                {/* --- ZMIANA NR 5: Dodajemy opcję instalacji w menu mobilnym --- */}
                 {canInstall && (
                     <DropdownMenuItem onClick={handleInstall}>
                         <Download className="mr-2 h-4 w-4" /> Zainstaluj aplikację
@@ -81,7 +92,7 @@ export default function MainLayout() {
         </div>
       </header>
 
-      {/* Twoja reszta kodu pozostaje nietknięta */}
+      {/* Twoja reszta kodu jest idealna i pozostaje nietknięta */}
       <main className="container mx-auto p-4 md:p-8 pb-24">
         <Routes>
           <Route path="/" element={<Dashboard />} />
