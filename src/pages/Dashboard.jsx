@@ -18,11 +18,52 @@ export default function Dashboard() {
   const streamRef = useRef(null);
   const animationRef = useRef(null);
 
-  const beepSound = useMemo(() => new Audio('/bip.mp3'), []);
+  const beepSound = useMemo(() => {
+    if (typeof Audio !== "undefined") {
+      return new Audio('/bip.mp3');
+    }
+    return null;
+  }, []);
 
   useEffect(() => {
     getProducts();
   }, []);
+
+  useEffect(() => {
+    if (!isScannerDialogOpen) {
+      return;
+    }
+
+    const startScanner = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+        streamRef.current = stream;
+        
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          videoRef.current.setAttribute("playsinline", true);
+          await videoRef.current.play();
+          
+          animationRef.current = requestAnimationFrame(scanTick);
+        }
+      } catch (err) {
+        console.error("Błąd dostępu do kamery:", err);
+        setIsScannerDialogOpen(false); 
+      }
+    };
+
+    startScanner();
+
+    return () => {
+      if (animationRef.current) {
+        cancelAnimationFrame(animationRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [isScannerDialogOpen]);
+
 
   async function getProducts() {
     setLoading(true);
@@ -56,52 +97,34 @@ export default function Dashboard() {
     }, {});
   }, [products]);
 
-  const startScanner = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
-      streamRef.current = stream;
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        videoRef.current.setAttribute("playsinline", true);
-        videoRef.current.play();
-        scan();
-      }
-    } catch (err) {
-      console.error("Nie udało się uruchomić kamery:", err);
+  const scanTick = () => {
+    if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
+      animationRef.current = requestAnimationFrame(scanTick);
+      return;
     }
-  };
 
-  const scan = () => {
     const video = videoRef.current;
     const canvas = document.createElement("canvas");
     const ctx = canvas.getContext("2d");
+    
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const code = jsQR(imageData.data, canvas.width, canvas.height);
 
-    const tick = () => {
-      if (video.readyState === video.HAVE_ENOUGH_DATA) {
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
-        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const code = jsQR(imageData.data, canvas.width, canvas.height);
-        if (code) {
-          beepSound.play();
-          setSearchTerm(code.data);
-          stopScanner();
-          return;
-        }
-      }
-      animationRef.current = requestAnimationFrame(tick);
-    };
-
-    tick();
+    if (code) {
+      if (beepSound) beepSound.play();
+      setSearchTerm(code.data);
+      stopScanner();
+    } else {
+      animationRef.current = requestAnimationFrame(scanTick);
+    }
   };
 
   const stopScanner = () => {
-    if (animationRef.current) cancelAnimationFrame(animationRef.current);
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
     setIsScannerDialogOpen(false);
+    // Funkcja czyszcząca w useEffect zajmie się resztą
   };
 
   const renderContent = () => {
@@ -149,14 +172,14 @@ export default function Dashboard() {
         <CardContent>{renderContent()}</CardContent>
       </Card>
 
-      <Dialog open={isScannerDialogOpen} onOpenChange={(open) => { if (!open) stopScanner(); else startScanner(); }}>
+      <Dialog open={isScannerDialogOpen} onOpenChange={setIsScannerDialogOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Skaner Kodów QR</DialogTitle>
             <CardDescription>Umieść kod QR w zasięgu kamery.</CardDescription>
           </DialogHeader>
           <div className="w-full aspect-square bg-black rounded overflow-hidden">
-            <video id="qr-video" ref={videoRef} className="w-full h-full object-cover" />
+            <video ref={videoRef} className="w-full h-full object-cover" />
           </div>
           <Button variant="outline" onClick={stopScanner} className="mt-4 w-full">Anuluj</Button>
         </DialogContent>
