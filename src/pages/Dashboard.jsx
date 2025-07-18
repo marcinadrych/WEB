@@ -1,58 +1,28 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
-import { supabase } from '@/supabaseClient'
-import { Html5Qrcode } from 'html5-qrcode'
-import { Input } from "@/components/ui/input"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import ProductListItem from '@/components/ProductListItem'
-import SearchResultItem from '@/components/SearchResultItem'
-
-const qrcodeRegionId = "html5qr-code-full-region";
+import { useState, useEffect, useMemo, useRef } from 'react';
+import { supabase } from '@/supabaseClient';
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import ProductListItem from '@/components/ProductListItem';
+import SearchResultItem from '@/components/SearchResultItem';
+import jsQR from "jsqr";
 
 export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [isScannerDialogOpen, setIsScannerDialogOpen] = useState(false);
-  const [isCameraRunning, setIsCameraRunning] = useState(false);
-  const scannerRef = useRef(null);
+  const videoRef = useRef(null);
+  const streamRef = useRef(null);
+  const animationRef = useRef(null);
+
+  const beepSound = useMemo(() => new Audio('/bip.mp3'), []);
 
   useEffect(() => {
     getProducts();
   }, []);
-
-  const startScanner = () => {
-    const element = document.getElementById(qrcodeRegionId);
-    if (!element) return;
-    
-    setIsCameraRunning(true);
-    const scanner = new Html5Qrcode(qrcodeRegionId, false);
-    scannerRef.current = scanner;
-
-    const onScanSuccess = (decodedText) => {
-      stopScanner();
-      setSearchTerm(decodedText);
-    };
-    const onScanFailure = () => {};
-    
-    scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure)
-      .catch(() => scanner.start(undefined, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure));
-  };
-
-  const stopScanner = () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      scannerRef.current.stop()
-        .finally(() => {
-          setIsCameraRunning(false);
-          setIsScannerDialogOpen(false);
-        });
-    } else {
-      setIsCameraRunning(false);
-      setIsScannerDialogOpen(false);
-    }
-  };
 
   async function getProducts() {
     setLoading(true);
@@ -85,6 +55,54 @@ export default function Dashboard() {
       return acc;
     }, {});
   }, [products]);
+
+  const startScanner = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.setAttribute("playsinline", true);
+        videoRef.current.play();
+        scan();
+      }
+    } catch (err) {
+      console.error("Nie udało się uruchomić kamery:", err);
+    }
+  };
+
+  const scan = () => {
+    const video = videoRef.current;
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+
+    const tick = () => {
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const code = jsQR(imageData.data, canvas.width, canvas.height);
+        if (code) {
+          beepSound.play();
+          setSearchTerm(code.data);
+          stopScanner();
+          return;
+        }
+      }
+      animationRef.current = requestAnimationFrame(tick);
+    };
+
+    tick();
+  };
+
+  const stopScanner = () => {
+    if (animationRef.current) cancelAnimationFrame(animationRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+    setIsScannerDialogOpen(false);
+  };
 
   const renderContent = () => {
     if (loading) return <p className="text-center py-10">Ładowanie...</p>;
@@ -130,23 +148,19 @@ export default function Dashboard() {
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>
       </Card>
-      
-      <Dialog open={isScannerDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) stopScanner(); }}>
+
+      <Dialog open={isScannerDialogOpen} onOpenChange={(open) => { if (!open) stopScanner(); else startScanner(); }}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Skaner Kodów QR</DialogTitle>
-            <CardDescription>Ustaw kod QR w ramce.</CardDescription>
+            <CardDescription>Umieść kod QR w zasięgu kamery.</CardDescription>
           </DialogHeader>
-          <div id={qrcodeRegionId} className={isCameraRunning ? "w-full mt-4 rounded-lg overflow-hidden" : "hidden"}></div>
-          {!isCameraRunning && (
-            <div className="flex flex-col items-center justify-center gap-4 my-8">
-              <p>Kliknij, aby uruchomić kamerę.</p>
-              <Button onClick={startScanner}>Pozwól na użycie aparatu</Button>
-            </div>
-          )}
+          <div className="w-full aspect-square bg-black rounded overflow-hidden">
+            <video id="qr-video" ref={videoRef} className="w-full h-full object-cover" />
+          </div>
           <Button variant="outline" onClick={stopScanner} className="mt-4 w-full">Anuluj</Button>
         </DialogContent>
       </Dialog>
     </div>
-  )
+  );
 }
