@@ -2,16 +2,18 @@
 
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
-// --- ZMIANA NR 1: Dodajemy nowe ikony ---
-import { Menu, Plus, PenSquare, PackagePlus } from 'lucide-react';
+// --- ZMIANA NR 1: Dodajemy ikonę 'Download' ---
+import { Menu, Plus, PenSquare, PackagePlus, Download } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-  DropdownMenuSeparator, // Dodajemy separator
+  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+// --- ZMIANA NR 2: Importujemy nasz nowy hook ---
+import { usePWAInstall } from '@/hooks/usePWAInstall'; 
 
 // Strony - Twoje importy są OK
 import Dashboard from '@/pages/Dashboard';
@@ -23,6 +25,9 @@ import UpdatePassword from '@/pages/UpdatePassword';
 
 export default function MainLayout() {
   const navigate = useNavigate();
+  
+  // --- ZMIANA NR 3: Używamy nowego hooka ---
+  const { canInstall, handleInstall } = usePWAInstall();
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
@@ -35,17 +40,22 @@ export default function MainLayout() {
         <div className="container mx-auto flex h-16 items-center justify-between">
           <Link to="/" className="text-xl font-bold">Magazyn</Link>
           
-          {/* Nawigacja desktopowa - BEZ ZMIAN */}
           <nav className="hidden md:flex items-center gap-4">
             <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
             <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
             <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
             <Link to="/update-password"><Button variant="secondary">Zmień Hasło</Button></Link>
+            
+            {/* --- ZMIANA NR 4: Dodajemy przycisk instalacji na desktop --- */}
+            {canInstall && (
+              <Button onClick={handleInstall}>
+                <Download className="mr-2 h-4 w-4" /> Zainstaluj
+              </Button>
+            )}
+
             <Button onClick={handleLogout} variant="secondary">Wyloguj</Button>
           </nav>
           
-          {/* --- ZMIANA NR 2: Upraszczamy menu hamburger --- */}
-          {/* Zostawiamy tu tylko nawigację, a akcje przenosimy do przycisku + */}
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -56,6 +66,14 @@ export default function MainLayout() {
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/update-password">Zmień Hasło</Link></DropdownMenuItem>
+                
+                {/* --- ZMIANA NR 5: Dodajemy opcję instalacji w menu mobilnym --- */}
+                {canInstall && (
+                    <DropdownMenuItem onClick={handleInstall}>
+                        <Download className="mr-2 h-4 w-4" /> Zainstaluj aplikację
+                    </DropdownMenuItem>
+                )}
+
                 <DropdownMenuItem onClick={handleLogout}>Wyloguj</DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
@@ -63,9 +81,8 @@ export default function MainLayout() {
         </div>
       </header>
 
-      {/* --- ZMIANA NR 3: Dodajemy padding na dole, żeby przycisk + nie zasłaniał treści --- */}
+      {/* Twoja reszta kodu pozostaje nietknięta */}
       <main className="container mx-auto p-4 md:p-8 pb-24">
-        {/* Zagnieżdżony router - BEZ ZMIAN */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
@@ -77,7 +94,6 @@ export default function MainLayout() {
         </Routes>
       </main>
 
-      {/* --- ZMIANA NR 4: Dodajemy nowy przycisk akcji (FAB) dla telefonów --- */}
       <div className="md:hidden fixed bottom-6 right-6 z-20">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
