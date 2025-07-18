@@ -3,10 +3,12 @@ import { supabase } from '@/supabaseClient'
 import { Html5QrcodeScanner } from 'html5-qrcode'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card' // Dodajemy CardDescription
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog" // Dodajemy Dialog
 import ProductListItem from '@/components/ProductListItem'
-import SearchResultItem from '@/components/SearchResultItem' // Będziemy go potrzebować
+import SearchResultItem from '@/components/SearchResultItem'
+import { QrCode } from 'lucide-react' // Dodajemy ikonę
 
 const qrcodeRegionId = "html5qr-code-full-region";
 
@@ -14,7 +16,9 @@ export default function Dashboard() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  
+  // --- ZMIANA NR 1: Zmieniamy nazwę stanu dla jasności ---
+  const [isScannerDialogOpen, setIsScannerDialogOpen] = useState(false);
   const scannerRef = useRef(null);
 
   useEffect(() => {
@@ -22,9 +26,31 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    // Logika skanera pozostaje bez zmian
-    if (isScannerOpen) { if (!scannerRef.current) { scannerRef.current = new Html5QrcodeScanner(qrcodeRegionId, { fps: 10, qrbox: { width: 250, height: 250 } }, false); } scannerRef.current.render(onScanSuccess, onScanFailure); } else { if (scannerRef.current && scannerRef.current.getState() === 2) { scannerRef.current.clear().catch(e => {}); } } return () => { if (scannerRef.current && scannerRef.current.getState() === 2) { scannerRef.current.clear().catch(e => {}); } };
-  }, [isScannerOpen]);
+    if (!isScannerDialogOpen) {
+      return;
+    }
+    
+    // --- KLUCZOWA POPRAWKA ---
+    // Czekamy ułamek sekundy (100ms), żeby React zdążył wyrenderować Dialog
+    const timer = setTimeout(() => {
+      const scanner = new Html5QrcodeScanner(qrcodeRegionId, { fps: 10, qrbox: { width: 250, height: 250 } }, false);
+      scannerRef.current = scanner;
+
+    function onScanSuccess(decodedText) {
+      setSearchTerm(decodedText);
+      setIsScannerDialogOpen(false); // Zamykamy dialog po sukcesie
+    }
+    function onScanFailure(error) {}
+
+    scanner.render(onScanSuccess, onScanFailure);
+  }, 100);
+
+    return () => {
+      if (scannerRef.current && scannerRef.current.getState() === 2) {
+        scannerRef.current.clear().catch(error => console.error("Błąd czyszczenia skanera.", error));
+      }
+    };
+  }, [isScannerDialogOpen]);
 
   function onScanSuccess(decodedText) { setSearchTerm(decodedText); setIsScannerOpen(false); }
   function onScanFailure(error) {}
@@ -36,7 +62,7 @@ export default function Dashboard() {
     setLoading(false);
   }
 
-  // Uproszczona i bardziej niezawodna logika
+  // Twoja logika filtrowania i grupowania - BEZ ZMIAN
   const filteredProducts = useMemo(() => {
     if (!searchTerm.trim()) return [];
     const keywords = searchTerm.toLowerCase().split(' ').filter(Boolean);
@@ -97,11 +123,27 @@ export default function Dashboard() {
           <CardTitle className="text-2xl">Stan Magazynu</CardTitle>
           <div className="flex w-full md:w-auto gap-2">
             <Input placeholder="Szukaj..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full max-w-sm" />
-            <Button variant="secondary" onClick={() => setIsScannerOpen(p => !p)}>{isScannerOpen ? "Zamknij Skaner" : "Skanuj QR"}</Button>
+            
+            {/* --- ZMIANA NR 3: Nowy przycisk i okno dialogowe --- */}
+            <Dialog open={isScannerDialogOpen} onOpenChange={setIsScannerDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="secondary">
+                  Skanuj Kod
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle>Skaner Kodów QR</DialogTitle>
+                  <CardDescription>Umieść kod QR w ramce, aby go zeskanować.</CardDescription>
+                </DialogHeader>
+                <div id={qrcodeRegionId} className="w-full mt-4 rounded-lg overflow-hidden"></div>
+              </DialogContent>
+            </Dialog>
+
           </div>
         </CardHeader>
         <CardContent>
-          {isScannerOpen && <div id={qrcodeRegionId} className="w-full my-4" />}
+          {/* --- ZMIANA NR 4: Usunięcie starego kontenera skanera --- */}
           {renderContent()}
         </CardContent>
       </Card>

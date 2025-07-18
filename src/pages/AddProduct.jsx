@@ -1,5 +1,7 @@
+// src/pages/AddProduct.jsx
+
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom' // <<< DODAJEMY BRAKUJĄCY Link
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -14,13 +16,16 @@ export default function AddProduct() {
   const [loading, setLoading] = useState(false)
   const [allCategories, setAllCategories] = useState([])
   const [allSubcategories, setAllSubcategories] = useState([])
-
+  
   const [productName, setProductName] = useState('')
   const [category, setCategory] = useState('')
   const [subcategory, setSubcategory] = useState('')
   const [unit, setUnit] = useState('szt.')
   const [initialQuantity, setInitialQuantity] = useState('0')
   const [notes, setNotes] = useState('')
+  
+  const [suggestions, setSuggestions] = useState([])
+  const [isSearching, setIsSearching] = useState(false)
   
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -37,6 +42,25 @@ export default function AddProduct() {
     }
     getExistingOptions();
   }, [])
+  
+  useEffect(() => {
+    if (productName.trim().length < 3) {
+      setSuggestions([]);
+      return;
+    }
+    setIsSearching(true);
+    const searchTimer = setTimeout(async () => {
+      const { data } = await supabase
+        .from('produkty')
+        .select('id, nazwa')
+        .ilike('nazwa', `%${productName.trim()}%`)
+        .limit(5);
+      setSuggestions(data || []);
+      setIsSearching(false);
+    }, 500);
+    return () => clearTimeout(searchTimer);
+  }, [productName]);
+
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -78,7 +102,33 @@ export default function AddProduct() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="productName">Nazwa produktu</Label>
-              <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} required />
+              <Input
+                id="productName"
+                value={productName}
+                onChange={(e) => setProductName(e.target.value)}
+                required
+                autoComplete="off"
+              />
+              {(isSearching || suggestions.length > 0) && (
+                <div className="border rounded-md mt-2 p-2 bg-muted/50 text-sm">
+                  {isSearching ? (
+                    <p className="text-muted-foreground">Szukanie...</p>
+                  ) : (
+                    <>
+                      <p className="font-semibold mb-2">Znaleziono podobne produkty:</p>
+                      <ul className="flex flex-col gap-1">
+                        {suggestions.map(s => (
+                          <li key={s.id}>
+                            <Link to={`/edytuj-produkt/${s.id}`} className="text-primary hover:underline">
+                              {s.nazwa} (kliknij, aby edytować)
+                            </Link>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              )}
             </div>
             
             <div className="grid gap-2">
@@ -99,7 +149,6 @@ export default function AddProduct() {
                 placeholder="Wybierz lub wpisz nową..."
               />
             </div>
-            
             <div className="grid gap-2"><Label htmlFor="notes">Uwagi (opcjonalnie)</Label><Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 grid gap-2"><Label htmlFor="initialQuantity">Ilość początkowa</Label><Input id="initialQuantity" type="number" min="0" step="any" value={initialQuantity} onChange={(e) => setInitialQuantity(e.target.value)} required /></div>

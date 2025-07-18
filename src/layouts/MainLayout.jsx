@@ -2,22 +2,24 @@
 
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
-import { Menu } from 'lucide-react';
+// --- ZMIANA NR 1: Dodajemy nowe ikony ---
+import { Menu, Plus, PenSquare, PackagePlus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuTrigger
+  DropdownMenuTrigger,
+  DropdownMenuSeparator, // Dodajemy separator
 } from "@/components/ui/dropdown-menu";
 
-// Strony
+// Strony - Twoje importy są OK
 import Dashboard from '@/pages/Dashboard';
 import AddProduct from '@/pages/AddProduct';
 import ZmienStan from '@/pages/ZmienStan';
 import EditProduct from '@/pages/EditProduct';
 import QRPage from '@/pages/QRPage';
-import UpdatePassword from '@/pages/UpdatePassword'; // Dodane!
+import UpdatePassword from '@/pages/UpdatePassword';
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -32,6 +34,8 @@ export default function MainLayout() {
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto flex h-16 items-center justify-between">
           <Link to="/" className="text-xl font-bold">Magazyn</Link>
+          
+          {/* Nawigacja desktopowa - BEZ ZMIAN */}
           <nav className="hidden md:flex items-center gap-4">
             <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
             <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
@@ -39,6 +43,9 @@ export default function MainLayout() {
             <Link to="/update-password"><Button variant="secondary">Zmień Hasło</Button></Link>
             <Button onClick={handleLogout} variant="secondary">Wyloguj</Button>
           </nav>
+          
+          {/* --- ZMIANA NR 2: Upraszczamy menu hamburger --- */}
+          {/* Zostawiamy tu tylko nawigację, a akcje przenosimy do przycisku + */}
           <div className="md:hidden">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -48,8 +55,6 @@ export default function MainLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/zmien-stan">Zmień Stan</Link></DropdownMenuItem>
-                <DropdownMenuItem asChild><Link to="/dodaj-produkt">Nowy Produkt</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/update-password">Zmień Hasło</Link></DropdownMenuItem>
                 <DropdownMenuItem onClick={handleLogout}>Wyloguj</DropdownMenuItem>
               </DropdownMenuContent>
@@ -58,17 +63,41 @@ export default function MainLayout() {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 md:p-8">
+      {/* --- ZMIANA NR 3: Dodajemy padding na dole, żeby przycisk + nie zasłaniał treści --- */}
+      <main className="container mx-auto p-4 md:p-8 pb-24">
+        {/* Zagnieżdżony router - BEZ ZMIAN */}
         <Routes>
           <Route path="/" element={<Dashboard />} />
           <Route path="/dodaj-produkt" element={<AddProduct />} />
           <Route path="/zmien-stan" element={<ZmienStan />} />
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
           <Route path="/qr" element={<QRPage />} />
-          <Route path="/update-password" element={<UpdatePassword />} /> {/* Dodane */}
+          <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
+
+      {/* --- ZMIANA NR 4: Dodajemy nowy przycisk akcji (FAB) dla telefonów --- */}
+      <div className="md:hidden fixed bottom-6 right-6 z-20">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button size="lg" className="rounded-full w-16 h-16 shadow-lg">
+              <Plus className="h-8 w-8" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="mb-2 w-56">
+            <DropdownMenuItem onSelect={() => navigate('/zmien-stan')} className="py-3 text-lg">
+              <PenSquare className="mr-2 h-5 w-5" />
+              <span>Zmień Stan</span>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => navigate('/dodaj-produkt')} className="py-3 text-lg">
+              <PackagePlus className="mr-2 h-5 w-5" />
+              <span>Nowy Produkt</span>
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </>
   );
 }
