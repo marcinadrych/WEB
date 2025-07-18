@@ -2,13 +2,13 @@
 
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { supabase } from '@/supabaseClient'
-// --- ZMIANA NR 1: Zmieniamy import, żeby mieć dostęp do bardziej zaawansowanych opcji ---
 import { Html5Qrcode } from 'html5-qrcode'
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion"
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+// --- ZMIANA NR 1: Usuwamy DialogTrigger, bo nie będzie potrzebny ---
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import ProductListItem from '@/components/ProductListItem'
 import SearchResultItem from '@/components/SearchResultItem'
 import { QrCode } from 'lucide-react'
@@ -26,50 +26,45 @@ export default function Dashboard() {
     getProducts();
   }, []);
 
-  // --- ZMIANA NR 2: Zastępujemy całą logikę skanera nową, ulepszoną wersją ---
-  useEffect(() => {
-    if (!isScannerDialogOpen) return;
+  // --- ZMIANA NR 2: Nowe, niezawodne funkcje do ręcznego sterowania skanerem ---
+  const startScanner = () => {
+    setIsScannerDialogOpen(true); // Najpierw otwórz okno
+    setTimeout(async () => {
+      try {
+        // Ta linia sama w sobie wywoła prośbę o dostęp do kamery
+        await Html5Qrcode.getCameras();
+        
+        const scanner = new Html5Qrcode(qrcodeRegionId, false);
+        scannerRef.current = scanner;
 
-    const startScanner = () => {
-      const element = document.getElementById(qrcodeRegionId);
-      if (!element) return;
+        const onScanSuccess = (decodedText) => {
+          setSearchTerm(decodedText);
+          stopScanner(); // Zatrzymaj i zamknij po sukcesie
+        };
+        const onScanFailure = (error) => {};
 
-      // Konfiguracja skanera (bezpośrednio z dokumentacji)
-      const config = {
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-      };
-      
-      const scanner = new Html5Qrcode(qrcodeRegionId, false);
-      scannerRef.current = scanner;
-
-      const onScanSuccess = (decodedText) => {
-        setSearchTerm(decodedText);
-        setIsScannerDialogOpen(false);
-      };
-      const onScanFailure = (error) => {};
-      
-      // Uruchamiamy skaner, prosząc o tylną kamerę
-      scanner.start({ facingMode: "environment" }, config, onScanSuccess, onScanFailure)
-        .catch(err => {
-          // Jeśli nie ma tylnej kamery, próbuj z jakąkolwiek
-          console.warn("Nie udało się znaleźć tylnego aparatu, próbuję z domyślnym:", err);
-          scanner.start(undefined, config, onScanSuccess, onScanFailure)
-            .catch(err => console.error("Nie udało się uruchomić skanera.", err));
-        });
-    };
-
-    // Używamy setTimeout, żeby dać Reactowi czas na wyrenderowanie okna
-    const timer = setTimeout(startScanner, 100);
-
-    // Funkcja czyszcząca, zatrzymuje kamerę po zamknięciu okna
-    return () => {
-      clearTimeout(timer);
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().catch(error => console.error("Błąd zatrzymywania skanera.", error));
+        scanner.start({ facingMode: "environment" }, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure)
+          .catch(() => scanner.start(undefined, { fps: 10, qrbox: { width: 250, height: 250 } }, onScanSuccess, onScanFailure));
+      } catch (err) {
+        console.error("Błąd inicjalizacji skanera:", err);
+        setIsScannerDialogOpen(false); // Zamknij okno, jeśli użytkownik nie da dostępu
       }
-    };
-  }, [isScannerDialogOpen]);
+    }, 100);
+  };
+
+  const stopScanner = () => {
+    if (scannerRef.current && scannerRef.current.isScanning) {
+      scannerRef.current.stop()
+        .then(() => setIsScannerDialogOpen(false))
+        .catch(err => {
+          console.error("Błąd zatrzymywania skanera:", err);
+          setIsScannerDialogOpen(false);
+        });
+    } else {
+      setIsScannerDialogOpen(false);
+    }
+  };
+
 
   // Twoja reszta kodu pozostaje nietknięta
   async function getProducts() {
@@ -140,26 +135,29 @@ export default function Dashboard() {
           <div className="flex w-full md:w-auto gap-2">
             <Input placeholder="Szukaj..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="w-full max-w-sm" />
             
-            <Dialog open={isScannerDialogOpen} onOpenChange={setIsScannerDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="secondary">
-                  Skanuj Kod
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="sm:max-w-md">
-                <DialogHeader>
-                  <DialogTitle>Skaner Kodów QR</DialogTitle>
-                  <CardDescription>Umieść kod QR w ramce, aby go zeskanować.</CardDescription>
-                </DialogHeader>
-                <div id={qrcodeRegionId} className="w-full mt-4 rounded-lg overflow-hidden"></div>
-              </DialogContent>
-            </Dialog>
+            {/* --- ZMIANA NR 3: Przycisk wywołuje naszą nową funkcję --- */}
+            <Button variant="secondary" onClick={startScanner}>
+              Skanuj Kod
+            </Button>
+
           </div>
         </CardHeader>
         <CardContent>
           {renderContent()}
         </CardContent>
       </Card>
+
+      {/* --- ZMIANA NR 4: Dialog jest teraz w pełni kontrolowany przez nasz kod --- */}
+      <Dialog open={isScannerDialogOpen} onOpenChange={(isOpen) => { if (!isOpen) stopScanner(); }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Skaner Kodów QR</DialogTitle>
+            <CardDescription>Umieść kod QR w ramce, aby go zeskanować.</CardDescription>
+          </DialogHeader>
+          <div id={qrcodeRegionId} className="w-full mt-4 rounded-lg overflow-hidden"></div>
+          <Button variant="outline" onClick={stopScanner} className="mt-4">Anuluj</Button>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
