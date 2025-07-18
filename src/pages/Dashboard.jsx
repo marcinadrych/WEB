@@ -35,14 +35,17 @@ export default function Dashboard() {
     if (!isScannerDialogOpen) {
       return;
     }
+
     const startScanner = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' } });
         streamRef.current = stream;
+        
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
           videoRef.current.setAttribute("playsinline", true);
           await videoRef.current.play();
+          
           animationRef.current = requestAnimationFrame(scanTick);
         }
       } catch (err) {
@@ -50,7 +53,9 @@ export default function Dashboard() {
         setIsScannerDialogOpen(false); 
       }
     };
+
     startScanner();
+
     return () => {
       if (animationRef.current) {
         cancelAnimationFrame(animationRef.current);
@@ -60,6 +65,7 @@ export default function Dashboard() {
       }
     };
   }, [isScannerDialogOpen]);
+
 
   async function getProducts() {
     setLoading(true);
@@ -75,31 +81,33 @@ export default function Dashboard() {
   // --- TO JEST JEDYNA ZMIENIONA SEKCJA W CAŁYM PLIKU ---
   const filteredProducts = useMemo(() => {
     const term = searchTerm.trim();
-    // Jeśli nie ma wyszukiwania, nie pokazuj płaskiej listy
     if (!term) return []; 
 
-    // Sprawdzamy, czy wyszukiwana fraza jest LICZBĄ
-    const isSearchTermNumeric = /^\d+$/.test(term);
+    // Sprawdzamy, czy wyszukiwana fraza składa się wyłącznie z cyfr
+    const isNumeric = /^\d+$/.test(term);
     
     return products.filter(product => {
-      // Jeśli szukamy po liczbie (z kodu QR), sprawdzaj TYLKO ID
-      if (isSearchTermNumeric) {
+      // Jeśli szukamy po liczbie (z kodu QR), filtruj TYLKO po ID
+      if (isNumeric) {
         return String(product.id) === term;
-      }
+      } 
       
       // W przeciwnym wypadku, rób inteligentne wyszukiwanie tekstowe
-      const searchKeywords = term.toLowerCase().split(' ').filter(Boolean);
-      const productText = [
-        product.nazwa,
-        product.kategoria,
-        product.podkategoria || ''
-      ].join(' ').toLowerCase();
-      
-      return searchKeywords.every(keyword => productText.includes(keyword));
+      else {
+        const searchKeywords = term.toLowerCase().split(' ').filter(Boolean);
+        return searchKeywords.every(keyword => {
+          const productText = [
+            product.nazwa,
+            product.kategoria,
+            product.podkategoria || ''
+          ].join(' ').toLowerCase();
+          return productText.includes(keyword);
+        });
+      }
     });
   }, [products, searchTerm]);
+  // --- KONIEC ZMIAN ---
 
-  // Twoja logika grupowania jest OK, zostaje bez zmian
   const groupedProducts = useMemo(() => {
     return products.reduce((acc, p) => {
       const cat = p.kategoria;
@@ -111,7 +119,6 @@ export default function Dashboard() {
     }, {});
   }, [products]);
 
-  // Twoje funkcje scanTick i stopScanner są OK, zostają bez zmian
   const scanTick = () => {
     if (!videoRef.current || videoRef.current.readyState !== videoRef.current.HAVE_ENOUGH_DATA) {
       animationRef.current = requestAnimationFrame(scanTick);
@@ -133,11 +140,11 @@ export default function Dashboard() {
       animationRef.current = requestAnimationFrame(scanTick);
     }
   };
+  
   const stopScanner = () => {
     setIsScannerDialogOpen(false);
   };
-  
-  // Twoja funkcja renderContent jest OK, zostaje bez zmian
+
   const renderContent = () => {
     if (loading) return <p className="text-center py-10">Ładowanie...</p>;
     if (searchTerm.trim()) {
@@ -169,8 +176,7 @@ export default function Dashboard() {
       </Accordion>
     );
   };
-  
-  // Twój return z JSX jest OK, zostaje bez zmian
+
   return (
     <div className="flex flex-col gap-6">
       <Card>
