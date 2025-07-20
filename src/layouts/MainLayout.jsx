@@ -101,6 +101,7 @@ export default function MainLayout() {
           <Route path="/edytuj-produkt/:id" element={<EditProduct />} />
           <Route path="/qr" element={<QRPage />} />
           <Route path="/update-password" element={<UpdatePassword />} />
+          <Route path="/print-labels" element={<PrintLabelsPage />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>

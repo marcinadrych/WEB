@@ -14,7 +14,6 @@ import CategoryCombobox from '@/components/CategoryCombobox'
 
 export default function EditProduct() {
   const { id } = useParams();
-  const navigate = useNavigate();
   const { toast } = useToast();
 
   const [loading, setLoading] = useState(true);
@@ -25,6 +24,8 @@ export default function EditProduct() {
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
+  // --- ZMIANA NR 1: Dodajemy stan dla wymiaru ---
+  const [dimension, setDimension] = useState('');
   const [unit, setUnit] = useState('szt.');
   const [notes, setNotes] = useState('');
 
@@ -32,14 +33,23 @@ export default function EditProduct() {
     async function fetchData() {
       setLoading(true);
       const { data: productData, error: productError } = await supabase.from('produkty').select('*').eq('id', id).single();
-      if (productError) { /* ... obsługa błędu ... */ } 
+      
+      if (productError) {
+        toast({ title: "Błąd", description: "Nie udało się pobrać danych produktu.", variant: "destructive" });
+        window.location.href = '/';
+        return;
+      } 
+      
       if (productData) {
         setProductName(productData.nazwa);
         setCategory(productData.kategoria);
         setSubcategory(productData.podkategoria || '');
+        // --- ZMIANA NR 2: Wczytujemy wymiar z bazy ---
+        setDimension(productData.wymiar || '');
         setUnit(productData.jednostka || 'szt.');
         setNotes(productData.uwagi || '');
       }
+      
       const { data: optionsData } = await supabase.from('produkty').select('kategoria, podkategoria');
       if (optionsData) {
         setAllCategories([...new Set(optionsData.map(p => p.kategoria).filter(Boolean))]);
@@ -56,22 +66,25 @@ export default function EditProduct() {
 
     setLoading(true);
     try {
-      // --- POPRAWIONY OBIEKT UPDATE ---
       const { error } = await supabase
         .from('produkty')
         .update({
           nazwa: productName,
           kategoria: category,
           podkategoria: subcategory || null,
-          jednostka: unit, // <<< UPEWNIAMY SIĘ, ŻE TO POLE JEST TUTAJ
+          // --- ZMIANA NR 3: Dodajemy 'wymiar' do obiektu aktualizacji ---
+          wymiar: dimension || null,
+          jednostka: unit,
           uwagi: notes || null,
+          // Dodajemy też aktualizację informacji o zmianie
+          ostatnia_zmiana_przez: (await supabase.auth.getUser()).data.user.email,
+          data_ostatniej_zmiany: new Date().toISOString(),
         })
         .eq('id', id);
 
       if (error) throw error;
       
       toast({ title: "Sukces!", description: "Dane produktu zostały zaktualizowane." });
-      // Używamy twardego przeładowania, żeby Dashboard się odświeżył
       window.location.href = '/'; 
     } catch (error) {
       toast({ title: "Błąd serwera", description: error.message, variant: "destructive" });
@@ -89,10 +102,20 @@ export default function EditProduct() {
         <CardHeader><CardTitle>Zmień dane produktu</CardTitle></CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-            {/* ... pola Nazwa, Kategoria, Podkategoria ... */}
             <div className="grid gap-2"><Label>Nazwa produktu</Label><Input value={productName} onChange={(e) => setProductName(e.target.value)} required /></div>
             <div className="grid gap-2"><Label>Kategoria</Label><CategoryCombobox value={category} setValue={setCategory} options={allCategories} placeholder="Wybierz lub wpisz nową..." /></div>
             <div className="grid gap-2"><Label>Podkategoria</Label><CategoryCombobox value={subcategory} setValue={setSubcategory} options={allSubcategories} placeholder="Wybierz lub wpisz nową..." /></div>
+            
+            {/* --- ZMIANA NR 4: Dodajemy nowe pole 'Wymiar' do formularza --- */}
+            <div className="grid gap-2">
+              <Label htmlFor="dimension">Wymiar (np. 15, 28, 3/4")</Label>
+              <Input
+                id="dimension"
+                value={dimension}
+                onChange={(e) => setDimension(e.target.value)}
+                placeholder="Wpisz wymiar/typ"
+              />
+            </div>
 
             <div className="grid gap-2">
               <Label htmlFor="notes">Uwagi</Label>
@@ -101,7 +124,6 @@ export default function EditProduct() {
             
             <div className="grid gap-2">
               <Label htmlFor="unit">Jednostka</Label>
-              {/* Upewniamy się, że `value` jest poprawnie powiązane */}
               <Select onValueChange={setUnit} value={unit}>
                 <SelectTrigger id="unit"><SelectValue /></SelectTrigger>
                 <SelectContent>

@@ -69,3 +69,57 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+.label-grid {
+  display: grid;
+  /* Dążymy do 5 kolumn na stronie A4 w orientacji pionowej */
+  grid-template-columns: repeat(5, 1fr);
+  gap: 4px; /* Mały odstęp, żeby łatwiej ciąć */
+}
+
+.label-item {
+  width: 40mm; /* Szerokość etykiety */
+  height: 25mm; /* Wysokość etykiety */
+  border: 1px dotted #999; /* Cienka, przerywana linia do cięcia */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+  box-sizing: border-box;
+  page-break-inside: avoid; /* Unikaj łamania etykiety na dwie strony */
+}
+
+.label-item .qr-container {
+  /* Kontener na kod QR, żeby obrazek się nie rozjeżdżał */
+}
+
+.label-item .product-name {
+  margin-top: 4px;
+  font-size: 7pt; /* Bardzo mała czcionka, żeby zmieścić nazwę */
+  font-weight: bold;
+  word-break: break-word; /* Złamuj długie słowa, jeśli trzeba */
+  line-height: 1.2;
+}
+
+@media print {
+  /* Ukryj wszystko, co nie jest kontenerem do druku */
+  body > #root > div > *:not(.print-labels-container) {
+    display: none;
+  }
+  
+  /* Ukryj nagłówek i przycisk wewnątrz kontenera */
+  .print-labels-container .print-header {
+    display: none;
+  }
+
+  /* Ustawienia strony A4 */
+  @page {
+    size: A4 portrait;
+    margin: 1cm;
+  }
+
+  /* Usuwamy obramowanie, które dodaliśmy do cięcia */
+  .label-item {
+    border: 1px dotted #999;
+  }
+}
