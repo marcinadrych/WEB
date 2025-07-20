@@ -17,7 +17,8 @@ export default function ListaZakupow() {
   const [loading, setLoading] = useState(true);
   const [customItems, setCustomItems] = useState([]);
   const [newItem, setNewItem] = useState('');
-  const [checkedItems, setCheckedItems] = useState(new Set()); // Ten stan teraz obsłuży obie listy
+  const [checkedItems, setCheckedItems] = useState(new Set());
+  const [isSubmitting, setIsSubmitting] = useState(false); // NOWY STAN DLA PRZYCISKU "DODAJ"
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -37,16 +38,29 @@ export default function ListaZakupow() {
     return products.filter(p => p.ilosc < NISKI_STAN);
   }, [products]);
 
+  // --- POPRAWIONA FUNKCJA handleAddCustomItem ---
   const handleAddCustomItem = async (e) => {
     e.preventDefault();
-    if (newItem.trim()) {
-      const { error } = await supabase.from('lista_zakupow_niestandardowa').insert({ nazwa: newItem.trim() });
+    if (!newItem.trim()) return;
+
+    setIsSubmitting(true); // Zablokuj przycisk
+    try {
+      const { error } = await supabase.from('lista_zakupow_niestandardowa').insert({
+        nazwa: newItem.trim(),
+        // user_id i kupione mają wartości domyślne w bazie
+      });
+
       if (error) {
-        toast({ title: "Błąd", description: "Nie udało się dodać pozycji.", variant: "destructive" });
-      } else {
-        setNewItem('');
-        fetchData();
+        throw error; // Rzuć błąd, żeby złapał go blok catch
       }
+      
+      setNewItem(''); // Wyczyść pole po sukcesie
+      await fetchData(); // Odśwież obie listy
+      
+    } catch (error) {
+      toast({ title: "Błąd", description: "Nie udało się dodać pozycji.", variant: "destructive" });
+    } finally {
+      setIsSubmitting(false); // Odblokuj przycisk
     }
   };
 
@@ -55,22 +69,17 @@ export default function ListaZakupow() {
     fetchData();
   };
 
-  // Zaznaczanie "kupione" w bazie dla listy niestandardowej
   const handleToggleCustomItem = async (item) => {
     await supabase.from('lista_zakupow_niestandardowa').update({ kupione: !item.kupione }).eq('id', item.id);
     fetchData();
   };
 
-  // Zaznaczanie tylko wizualne dla listy z magazynu
   const handleToggleShoppingListItem = (productId) => {
     setCheckedItems(prev => {
       const newChecked = new Set(prev);
       const key = `product-${productId}`;
-      if (newChecked.has(key)) {
-        newChecked.delete(key);
-      } else {
-        newChecked.add(key);
-      }
+      if (newChecked.has(key)) newChecked.delete(key);
+      else newChecked.add(key);
       return newChecked;
     });
   };
@@ -90,20 +99,12 @@ export default function ListaZakupow() {
         <CardContent>
           {shoppingList.length > 0 ? (
             <div className="space-y-4">
-              {/* --- PRZYWRÓCONE CHECKBOXY TUTAJ --- */}
               {shoppingList.map(product => {
                 const isChecked = checkedItems.has(`product-${product.id}`);
                 return (
                   <div key={`product-${product.id}`} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50">
-                    <Checkbox
-                      id={`product-item-${product.id}`}
-                      checked={isChecked}
-                      onCheckedChange={() => handleToggleShoppingListItem(product.id)}
-                    />
-                    <Label
-                      htmlFor={`product-item-${product.id}`}
-                      className={`flex-1 text-lg ${isChecked ? 'line-through text-muted-foreground' : ''}`}
-                    >
+                    <Checkbox id={`product-item-${product.id}`} checked={isChecked} onCheckedChange={() => handleToggleShoppingListItem(product.id)} />
+                    <Label htmlFor={`product-item-${product.id}`} className={`flex-1 text-lg ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
                       {product.nazwa} {product.wymiar || ''}
                       <span className="ml-2 font-semibold text-red-500"> (Zostało: {product.ilosc} {product.jednostka})</span>
                     </Label>
@@ -136,7 +137,10 @@ export default function ListaZakupow() {
           </div>
           <form onSubmit={handleAddCustomItem} className="flex gap-2">
             <Input placeholder="Wpisz co jeszcze trzeba kupić..." value={newItem} onChange={(e) => setNewItem(e.target.value)} />
-            <Button type="submit">Dodaj</Button>
+            {/* --- POPRAWIONY PRZYCISK "DODAJ" --- */}
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? 'Dodawanie...' : 'Dodaj'}
+            </Button>
           </form>
         </CardContent>
       </Card>
