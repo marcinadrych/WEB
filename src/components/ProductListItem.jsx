@@ -3,9 +3,11 @@
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+// --- ZMIANA NR 1: Dodajemy import ikon ---
+import { Plus, Minus } from 'lucide-react';
 
-export default function ProductListItem({ product }) {
-  // Tworzymy link do naszej strony QR
+// --- ZMIANA NR 2: Komponent teraz przyjmuje nową właściwość `onQuickUpdate` ---
+export default function ProductListItem({ product, onQuickUpdate }) {
   const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
 
   return (
@@ -30,8 +32,21 @@ export default function ProductListItem({ product }) {
               <p className="text-muted-foreground whitespace-pre-wrap">{product.uwagi}</p>
             </div>
           )}
+          
+          {/* --- ZMIANA NR 3: Dodajemy nową sekcję do szybkiej zmiany stanu --- */}
+          <div className="flex items-center justify-between p-2 mt-2 bg-background rounded-md">
+            <span className="font-semibold">Szybka zmiana stanu:</span>
+            <div className="flex items-center gap-2">
+              <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'remove')}>
+  <Minus className="h-4 w-4" />
+</Button>
+              <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'add')}>
+  <Plus className="h-4 w-4" />
+</Button>
+            </div>
+          </div>
+          
           <div className="flex gap-2 justify-end pt-2">
-            {/* Ten link otwiera QR w nowej karcie - to jest niezawodne */}
             <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">Pokaż QR</Button>
             </a>

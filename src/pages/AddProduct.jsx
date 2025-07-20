@@ -13,6 +13,7 @@ import { useToast } from "@/components/ui/use-toast"
 import CategoryCombobox from '@/components/CategoryCombobox'
 
 export default function AddProduct() {
+  const [dimension, setDimension] = useState('');
   const [loading, setLoading] = useState(false)
   const [allCategories, setAllCategories] = useState([])
   const [allSubcategories, setAllSubcategories] = useState([])
@@ -79,6 +80,7 @@ export default function AddProduct() {
         nazwa: productName,
         kategoria: category,
         podkategoria: subcategory || null,
+        wymiar: dimension || null,
         uwagi: notes || null,
         jednostka: unit,
         ilosc: quantityToInsert,
@@ -149,6 +151,15 @@ export default function AddProduct() {
                 placeholder="Wybierz lub wpisz nową..."
               />
             </div>
+            <div className="grid gap-2">
+  <Label htmlFor="dimension">Wymiar (np. 15, 28, 3/4")</Label>
+  <Input
+    id="dimension"
+    value={dimension}
+    onChange={(e) => setDimension(e.target.value)}
+    placeholder="Wpisz wymiar/typ"
+  />
+</div>
             <div className="grid gap-2"><Label htmlFor="notes">Uwagi (opcjonalnie)</Label><Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 grid gap-2"><Label htmlFor="initialQuantity">Ilość początkowa</Label><Input id="initialQuantity" type="number" min="0" step="any" value={initialQuantity} onChange={(e) => setInitialQuantity(e.target.value)} required /></div>
