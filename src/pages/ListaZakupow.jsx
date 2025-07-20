@@ -17,14 +17,13 @@ export default function ListaZakupow() {
   const [loading, setLoading] = useState(true);
   const [customItems, setCustomItems] = useState([]);
   const [newItem, setNewItem] = useState('');
+  const [checkedItems, setCheckedItems] = useState(new Set()); // Ten stan teraz obsłuży obie listy
   const { toast } = useToast();
 
   const fetchData = async () => {
     setLoading(true);
     const { data: productsData } = await supabase.from('produkty').select('*').order('nazwa');
     setProducts(productsData || []);
-    
-    // Pobieramy całą, wspólną listę
     const { data: customItemsData } = await supabase.from('lista_zakupow_niestandardowa').select('*').order('created_at');
     setCustomItems(customItemsData || []);
     setLoading(false);
@@ -41,16 +40,12 @@ export default function ListaZakupow() {
   const handleAddCustomItem = async (e) => {
     e.preventDefault();
     if (newItem.trim()) {
-      // Nie musimy już dodawać user_id
-      const { error } = await supabase.from('lista_zakupow_niestandardowa').insert({
-        nazwa: newItem.trim(),
-      });
-
+      const { error } = await supabase.from('lista_zakupow_niestandardowa').insert({ nazwa: newItem.trim() });
       if (error) {
         toast({ title: "Błąd", description: "Nie udało się dodać pozycji.", variant: "destructive" });
       } else {
         setNewItem('');
-        fetchData(); // Odśwież listę
+        fetchData();
       }
     }
   };
@@ -60,9 +55,24 @@ export default function ListaZakupow() {
     fetchData();
   };
 
+  // Zaznaczanie "kupione" w bazie dla listy niestandardowej
   const handleToggleCustomItem = async (item) => {
     await supabase.from('lista_zakupow_niestandardowa').update({ kupione: !item.kupione }).eq('id', item.id);
     fetchData();
+  };
+
+  // Zaznaczanie tylko wizualne dla listy z magazynu
+  const handleToggleShoppingListItem = (productId) => {
+    setCheckedItems(prev => {
+      const newChecked = new Set(prev);
+      const key = `product-${productId}`;
+      if (newChecked.has(key)) {
+        newChecked.delete(key);
+      } else {
+        newChecked.add(key);
+      }
+      return newChecked;
+    });
   };
 
   if (loading) {
@@ -75,17 +85,31 @@ export default function ListaZakupow() {
       <Card>
         <CardHeader>
           <CardTitle>Z Magazynu (stan poniżej {NISKI_STAN})</CardTitle>
-          <CardDescription>Generowane automatycznie.</CardDescription>
+          <CardDescription>Generowane automatycznie. Odhaczenie jest tylko tymczasowe.</CardDescription>
         </CardHeader>
         <CardContent>
           {shoppingList.length > 0 ? (
-            <div className="space-y-2">
-              {shoppingList.map(product => (
-                <p key={`product-${product.id}`} className="text-lg p-2">
-                  - {product.nazwa} {product.wymiar || ''}
-                  <span className="ml-2 font-semibold text-red-500"> (Zostało: {product.ilosc} {product.jednostka})</span>
-                </p>
-              ))}
+            <div className="space-y-4">
+              {/* --- PRZYWRÓCONE CHECKBOXY TUTAJ --- */}
+              {shoppingList.map(product => {
+                const isChecked = checkedItems.has(`product-${product.id}`);
+                return (
+                  <div key={`product-${product.id}`} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50">
+                    <Checkbox
+                      id={`product-item-${product.id}`}
+                      checked={isChecked}
+                      onCheckedChange={() => handleToggleShoppingListItem(product.id)}
+                    />
+                    <Label
+                      htmlFor={`product-item-${product.id}`}
+                      className={`flex-1 text-lg ${isChecked ? 'line-through text-muted-foreground' : ''}`}
+                    >
+                      {product.nazwa} {product.wymiar || ''}
+                      <span className="ml-2 font-semibold text-red-500"> (Zostało: {product.ilosc} {product.jednostka})</span>
+                    </Label>
+                  </div>
+                );
+              })}
             </div>
           ) : <p className="text-sm text-muted-foreground">Brak produktów do uzupełnienia.</p>}
         </CardContent>
@@ -94,14 +118,14 @@ export default function ListaZakupow() {
       <Card>
         <CardHeader>
           <CardTitle>Dodatkowe Rzeczy (Wspólna Lista)</CardTitle>
-          <CardDescription>Zmiany na tej liście są widoczne dla wszystkich.</CardDescription>
+          <CardDescription>Zmiany na tej liście są zapisywane dla wszystkich.</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4 mb-6">
             {customItems.length > 0 ? customItems.map(item => (
               <div key={item.id} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50">
-                <Checkbox id={`item-${item.id}`} checked={item.kupione} onCheckedChange={() => handleToggleCustomItem(item)} />
-                <Label htmlFor={`item-${item.id}`} className={`flex-1 text-lg ${item.kupione ? 'line-through text-muted-foreground' : ''}`}>
+                <Checkbox id={`custom-item-${item.id}`} checked={item.kupione} onCheckedChange={() => handleToggleCustomItem(item)} />
+                <Label htmlFor={`custom-item-${item.id}`} className={`flex-1 text-lg ${item.kupione ? 'line-through text-muted-foreground' : ''}`}>
                   {item.nazwa}
                 </Label>
                 <Button variant="ghost" size="icon" onClick={() => handleRemoveCustomItem(item.id)} className="h-8 w-8">
