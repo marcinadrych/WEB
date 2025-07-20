@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  /* Jasny motyw (domyślny) - zostawiamy go bez zmian */
+  /* Jasny motyw (domyślny) */
   :root {
     --background: 0 0% 100%;
     --foreground: 222.2 84% 4.9%;
@@ -27,34 +27,26 @@
     --radius: 0.5rem;
   }
 
-  /* NASZ NOWY, ZMODYFIKOWANY CIEMNY MOTYW */
+  /* Ciemny motyw */
   .dark {
-    --background: 220 14% 12%;      /* Bardzo ciemny, lekko chłodny szary (zamiast czarnego) */
-    --foreground: 210 40% 98%;      /* Jasny, czytelny tekst */
-    
-    --card: 220 14% 16%;              /* Karty trochę jaśniejsze od tła dla kontrastu */
+    --background: 220 14% 12%;
+    --foreground: 210 40% 98%;
+    --card: 220 14% 16%;
     --card-foreground: 210 40% 98%;
-    
     --popover: 220 14% 16%;
     --popover-foreground: 210 40% 98%;
-    
-    --primary: 210 40% 98%;           /* Główny kolor (np. przyciski) - prawie biały */
-    --primary-foreground: 222.2 47.4% 11.2%; /* Tekst na głównym kolorze - ciemny */
-    
-    --secondary: 217.2 32.6% 24%;      /* Drugorzędne tło/przyciski - ciemnoszary */
+    --primary: 210 40% 98%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 24%;
     --secondary-foreground: 210 40% 98%;
-    
     --muted: 217.2 32.6% 24%;
-    --muted-foreground: 215 20.2% 65.1%; /* Wyciszony tekst */
-    
+    --muted-foreground: 215 20.2% 65.1%;
     --accent: 217.2 32.6% 24%;
     --accent-foreground: 210 40% 98%;
-    
     --destructive: 0 62.8% 30.6%;
     --destructive-foreground: 210 40% 98%;
-    
-    --border: 217.2 32.6% 24%;          /* Kolor obramowań */
-    --input: 217.2 32.6% 24%;           /* Kolor tła pól tekstowych */
+    --border: 217.2 32.6% 24%;
+    --input: 217.2 32.6% 24%;
     --ring: 212.7 26.8% 83.9%;
   }
 }
@@ -69,45 +61,49 @@
     -moz-osx-font-smoothing: grayscale;
   }
 }
+
+/* ========================================================= */
+/*      STYLE DLA EKRANU I DO DRUKOWANIA ETYKIET             */
+/* ========================================================= */
+
+/* Style siatki etykiet widoczne na EKRANIE */
 .label-grid {
   display: grid;
-  /* Dążymy do 5 kolumn na stronie A4 w orientacji pionowej */
-  grid-template-columns: repeat(5, 1fr);
-  gap: 4px; /* Mały odstęp, żeby łatwiej ciąć */
+  grid-template-columns: repeat(auto-fill, minmax(40mm, 1fr));
+  gap: 8px;
 }
 
+/* Style pojedynczej etykiety widoczne na EKRANIE */
 .label-item {
-  width: 40mm; /* Szerokość etykiety */
-  height: 25mm; /* Wysokość etykiety */
-  border: 1px dotted #999; /* Cienka, przerywana linia do cięcia */
+  border: 1px dashed #999;
+  padding: 4px;
+  text-align: center;
+  overflow: hidden;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4px;
-  box-sizing: border-box;
-  page-break-inside: avoid; /* Unikaj łamania etykiety na dwie strony */
-}
-
-.label-item .qr-container {
-  /* Kontener na kod QR, żeby obrazek się nie rozjeżdżał */
+  background-color: #fff; /* Białe tło dla podglądu */
+  color: #000; /* Czarny tekst dla podglądu */
 }
 
 .label-item .product-name {
+  font-size: 8pt;
+  font-weight: 600;
+  line-height: 1.1;
   margin-top: 4px;
-  font-size: 7pt; /* Bardzo mała czcionka, żeby zmieścić nazwę */
-  font-weight: bold;
-  word-break: break-word; /* Złamuj długie słowa, jeśli trzeba */
-  line-height: 1.2;
+  word-break: break-word;
 }
 
+
+/* Style, które będą aktywne TYLKO podczas drukowania */
 @media print {
   /* Ukryj wszystko, co nie jest kontenerem do druku */
   body > #root > div > *:not(.print-labels-container) {
     display: none;
   }
   
-  /* Ukryj nagłówek i przycisk wewnątrz kontenera */
+  /* Wewnątrz kontenera, ukryj jego nagłówek i przycisk */
   .print-labels-container .print-header {
     display: none;
   }
@@ -118,8 +114,38 @@
     margin: 1cm;
   }
 
-  /* Usuwamy obramowanie, które dodaliśmy do cięcia */
+  /* Resetujemy podstawowe style dla idealnego wydruku */
+  body, .print-labels-container {
+    background: #fff !important;
+    color: #000 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    font-size: 8pt !important;
+    -webkit-print-color-adjust: exact; /* Kluczowe dla renderowania QR */
+    print-color-adjust: exact;
+  }
+
+  /* Ustawiamy sztywną siatkę TYLKO dla wydruku */
+  .label-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 40mm); /* Dokładnie 5 kolumn o szerokości 40mm */
+    grid-auto-rows: 25mm; /* Każdy wiersz ma wysokość 25mm */
+    gap: 0;
+    justify-content: start;
+  }
+
   .label-item {
-    border: 1px dotted #999;
+    width: 40mm;
+    height: 25mm;
+    border: 1px dotted #ccc; /* Cienka linia do cięcia */
+    page-break-inside: avoid; /* Unikaj łamania etykiety */
+    box-sizing: border-box;
+  }
+  
+  /* Upewnij się, że obrazek QR nie jest za duży */
+  .label-item img {
+    max-width: 100%;
+    max-height: 18mm;
+    object-fit: contain;
   }
 }

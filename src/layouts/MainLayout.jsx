@@ -20,6 +20,7 @@ import ZmienStan from '@/pages/ZmienStan';
 import EditProduct from '@/pages/EditProduct';
 import QRPage from '@/pages/QRPage';
 import UpdatePassword from '@/pages/UpdatePassword';
+import PrintLabelsPage from '@/pages/PrintLabelsPage';
 
 export default function MainLayout() {
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ export default function MainLayout() {
             <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
             <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
             <Link to="/update-password"><Button variant="secondary">Zmień Hasło</Button></Link>
+            <Link to="/print-labels"><Button variant="outline">Drukuj QR</Button></Link>
             
             {canInstall && (
               <Button onClick={handleInstall}>
