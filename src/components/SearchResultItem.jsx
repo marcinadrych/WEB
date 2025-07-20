@@ -34,13 +34,13 @@ export default function SearchResultItem({ product, onQuickUpdate }) {
       <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
         <span className="font-semibold">Zmień stan:</span>
         <div className="flex items-center gap-2">
-          <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, -1)}>
+          <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'remove')}>
             <Minus className="h-4 w-4" />
           </Button>
           <span className={`font-bold text-2xl w-24 text-center ${product.ilosc < 5 ? 'text-red-500' : 'text-green-500'}`}>
             {product.ilosc} {product.jednostka}
           </span>
-          <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 1)}>
+          <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'add')}>
             <Plus className="h-4 w-4" />
           </Button>
         </div>

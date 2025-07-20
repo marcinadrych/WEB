@@ -19,12 +19,13 @@ export default function EditProduct() {
   const [loading, setLoading] = useState(true);
   const [allCategories, setAllCategories] = useState([]);
   const [allSubcategories, setAllSubcategories] = useState([]);
+  // --- ZMIANA NR 1: Dodajemy stan dla opcji wymiarów ---
+  const [allDimensions, setAllDimensions] = useState([]);
 
   // Stany formularza
   const [productName, setProductName] = useState('');
   const [category, setCategory] = useState('');
   const [subcategory, setSubcategory] = useState('');
-  // --- ZMIANA NR 1: Dodajemy stan dla wymiaru ---
   const [dimension, setDimension] = useState('');
   const [unit, setUnit] = useState('szt.');
   const [notes, setNotes] = useState('');
@@ -44,26 +45,27 @@ export default function EditProduct() {
         setProductName(productData.nazwa);
         setCategory(productData.kategoria);
         setSubcategory(productData.podkategoria || '');
-        // --- ZMIANA NR 2: Wczytujemy wymiar z bazy ---
         setDimension(productData.wymiar || '');
         setUnit(productData.jednostka || 'szt.');
         setNotes(productData.uwagi || '');
       }
       
-      const { data: optionsData } = await supabase.from('produkty').select('kategoria, podkategoria');
+      // --- ZMIANA NR 2: Pobieramy również istniejące wymiary ---
+      const { data: optionsData } = await supabase.from('produkty').select('kategoria, podkategoria, wymiar');
       if (optionsData) {
         setAllCategories([...new Set(optionsData.map(p => p.kategoria).filter(Boolean))]);
         setAllSubcategories([...new Set(optionsData.map(p => p.podkategoria).filter(Boolean))]);
+        setAllDimensions([...new Set(optionsData.map(p => p.wymiar).filter(Boolean))]);
       }
       setLoading(false);
     }
     fetchData();
   }, [id, toast]);
 
+  // Twoja funkcja handleSubmit jest idealna, zostaje bez zmian
   async function handleSubmit(event) {
     event.preventDefault();
     if (!productName || !category) { /* ... walidacja ... */ return; }
-
     setLoading(true);
     try {
       const { error } = await supabase
@@ -72,18 +74,14 @@ export default function EditProduct() {
           nazwa: productName,
           kategoria: category,
           podkategoria: subcategory || null,
-          // --- ZMIANA NR 3: Dodajemy 'wymiar' do obiektu aktualizacji ---
           wymiar: dimension || null,
           jednostka: unit,
           uwagi: notes || null,
-          // Dodajemy też aktualizację informacji o zmianie
           ostatnia_zmiana_przez: (await supabase.auth.getUser()).data.user.email,
           data_ostatniej_zmiany: new Date().toISOString(),
         })
         .eq('id', id);
-
       if (error) throw error;
-      
       toast({ title: "Sukces!", description: "Dane produktu zostały zaktualizowane." });
       window.location.href = '/'; 
     } catch (error) {
@@ -106,14 +104,14 @@ export default function EditProduct() {
             <div className="grid gap-2"><Label>Kategoria</Label><CategoryCombobox value={category} setValue={setCategory} options={allCategories} placeholder="Wybierz lub wpisz nową..." /></div>
             <div className="grid gap-2"><Label>Podkategoria</Label><CategoryCombobox value={subcategory} setValue={setSubcategory} options={allSubcategories} placeholder="Wybierz lub wpisz nową..." /></div>
             
-            {/* --- ZMIANA NR 4: Dodajemy nowe pole 'Wymiar' do formularza --- */}
+            {/* --- ZMIANA NR 3: Zmieniamy Input na Combobox --- */}
             <div className="grid gap-2">
-              <Label htmlFor="dimension">Wymiar (np. 15, 28, 3/4")</Label>
-              <Input
-                id="dimension"
+              <Label>Wymiar (opcjonalnie)</Label>
+              <CategoryCombobox 
                 value={dimension}
-                onChange={(e) => setDimension(e.target.value)}
-                placeholder="Wpisz wymiar/typ"
+                setValue={setDimension}
+                options={allDimensions}
+                placeholder="Wybierz lub wpisz nowy..."
               />
             </div>
 

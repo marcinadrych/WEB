@@ -1,7 +1,7 @@
 // src/pages/AddProduct.jsx
 
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom' // <<< DODAJEMY BRAKUJĄCY Link
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '@/supabaseClient'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -13,36 +13,36 @@ import { useToast } from "@/components/ui/use-toast"
 import CategoryCombobox from '@/components/CategoryCombobox'
 
 export default function AddProduct() {
+  const [loading, setLoading] = useState(false);
+  const [allCategories, setAllCategories] = useState([]);
+  const [allSubcategories, setAllSubcategories] = useState([]);
+  const [allDimensions, setAllDimensions] = useState([]);
+  
+  const [productName, setProductName] = useState('');
+  const [category, setCategory] = useState('');
+  const [subcategory, setSubcategory] = useState('');
   const [dimension, setDimension] = useState('');
-  const [loading, setLoading] = useState(false)
-  const [allCategories, setAllCategories] = useState([])
-  const [allSubcategories, setAllSubcategories] = useState([])
+  const [unit, setUnit] = useState('szt.');
+  const [initialQuantity, setInitialQuantity] = useState('0');
+  const [notes, setNotes] = useState('');
   
-  const [productName, setProductName] = useState('')
-  const [category, setCategory] = useState('')
-  const [subcategory, setSubcategory] = useState('')
-  const [unit, setUnit] = useState('szt.')
-  const [initialQuantity, setInitialQuantity] = useState('0')
-  const [notes, setNotes] = useState('')
+  const [suggestions, setSuggestions] = useState([]);
+  const [isSearching, setIsSearching] = useState(false);
   
-  const [suggestions, setSuggestions] = useState([])
-  const [isSearching, setIsSearching] = useState(false)
-  
-  const navigate = useNavigate()
-  const { toast } = useToast()
+  const navigate = useNavigate();
+  const { toast } = useToast();
 
   useEffect(() => {
     async function getExistingOptions() {
-      const { data, error } = await supabase.from('produkty').select('kategoria, podkategoria');
+      const { data } = await supabase.from('produkty').select('kategoria, podkategoria, wymiar');
       if (data) {
-        const uniqueCategories = [...new Set(data.map(p => p.kategoria).filter(Boolean))];
-        const uniqueSubcategories = [...new Set(data.map(p => p.podkategoria).filter(Boolean))];
-        setAllCategories(uniqueCategories);
-        setAllSubcategories(uniqueSubcategories);
+        setAllCategories([...new Set(data.map(p => p.kategoria).filter(Boolean))]);
+        setAllSubcategories([...new Set(data.map(p => p.podkategoria).filter(Boolean))]);
+        setAllDimensions([...new Set(data.map(p => p.wymiar).filter(Boolean))]);
       }
     }
     getExistingOptions();
-  }, [])
+  }, []);
   
   useEffect(() => {
     if (productName.trim().length < 3) {
@@ -51,11 +51,7 @@ export default function AddProduct() {
     }
     setIsSearching(true);
     const searchTimer = setTimeout(async () => {
-      const { data } = await supabase
-        .from('produkty')
-        .select('id, nazwa')
-        .ilike('nazwa', `%${productName.trim()}%`)
-        .limit(5);
+      const { data } = await supabase.from('produkty').select('id, nazwa').ilike('nazwa', `%${productName.trim()}%`).limit(5);
       setSuggestions(data || []);
       setIsSearching(false);
     }, 500);
@@ -84,9 +80,11 @@ export default function AddProduct() {
         uwagi: notes || null,
         jednostka: unit,
         ilosc: quantityToInsert,
+        ostatnia_zmiana_przez: (await supabase.auth.getUser()).data.user.email,
+        data_ostatniej_zmiany: new Date().toISOString(),
       });
       toast({ title: "Sukces!", description: `Produkt "${productName}" został pomyślnie dodany.` });
-      navigate('/');
+      window.location.href = '/'; // Twarde przeładowanie dla pewności
     } catch (error) {
       console.error("Błąd z Supabase:", error);
       toast({ title: "Błąd serwera", description: error.message, variant: "destructive" });
@@ -111,6 +109,7 @@ export default function AddProduct() {
                 required
                 autoComplete="off"
               />
+              {/* --- TO JEST POPRAWIONY BLOK --- */}
               {(isSearching || suggestions.length > 0) && (
                 <div className="border rounded-md mt-2 p-2 bg-muted/50 text-sm">
                   {isSearching ? (
@@ -133,36 +132,12 @@ export default function AddProduct() {
               )}
             </div>
             
-            <div className="grid gap-2">
-              <Label>Kategoria</Label>
-              <CategoryCombobox 
-                value={category}
-                setValue={setCategory}
-                options={allCategories}
-                placeholder="Wybierz lub wpisz nową..."
-              />
-            </div>
-            <div className="grid gap-2">
-              <Label>Podkategoria (opcjonalnie)</Label>
-              <CategoryCombobox 
-                value={subcategory}
-                setValue={setSubcategory}
-                options={allSubcategories}
-                placeholder="Wybierz lub wpisz nową..."
-              />
-            </div>
-            <div className="grid gap-2">
-  <Label htmlFor="dimension">Wymiar (np. 15, 28, 3/4")</Label>
-  <Input
-    id="dimension"
-    value={dimension}
-    onChange={(e) => setDimension(e.target.value)}
-    placeholder="Wpisz wymiar/typ"
-  />
-</div>
-            <div className="grid gap-2"><Label htmlFor="notes">Uwagi (opcjonalnie)</Label><Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            <div className="grid gap-2"><Label>Kategoria</Label><CategoryCombobox value={category} setValue={setCategory} options={allCategories} placeholder="Wybierz lub wpisz nową..." /></div>
+            <div className="grid gap-2"><Label>Podkategoria</Label><CategoryCombobox value={subcategory} setValue={setSubcategory} options={allSubcategories} placeholder="Wybierz lub wpisz nową..." /></div>
+            <div className="grid gap-2"><Label>Wymiar</Label><CategoryCombobox value={dimension} setValue={setDimension} options={allDimensions} placeholder="Wybierz lub wpisz nowy..." /></div>
+            <div className="grid gap-2"><Label htmlFor="notes">Uwagi</Label><Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
             <div className="grid grid-cols-3 gap-4">
-              <div className="col-span-2 grid gap-2"><Label htmlFor="initialQuantity">Ilość początkowa</Label><Input id="initialQuantity" type="number" min="0" step="any" value={initialQuantity} onChange={(e) => setInitialQuantity(e.target.value)} required /></div>
+              <div className="col-span-2 grid gap-2"><Label htmlFor="initialQuantity">Ilość</Label><Input id="initialQuantity" type="number" min="0" step="any" value={initialQuantity} onChange={(e) => setInitialQuantity(e.target.value)} required /></div>
               <div className="grid gap-2"><Label htmlFor="unit">Jednostka</Label><Select onValueChange={setUnit} defaultValue="szt."><SelectTrigger id="unit"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="szt.">szt.</SelectItem><SelectItem value="mb">mb</SelectItem><SelectItem value="kg">kg</SelectItem><SelectItem value="op.">op.</SelectItem><SelectItem value="m²">m²</SelectItem></SelectContent></Select></div>
             </div>
             <Button type="submit" disabled={loading} className="w-full mt-2">{loading ? 'Dodawanie...' : 'Dodaj produkt'}</Button>

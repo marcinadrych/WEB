@@ -37,12 +37,12 @@ export default function ProductListItem({ product, onQuickUpdate }) {
           <div className="flex items-center justify-between p-2 mt-2 bg-background rounded-md">
             <span className="font-semibold">Szybka zmiana stanu:</span>
             <div className="flex items-center gap-2">
-              <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'remove')}>
-  <Minus className="h-4 w-4" />
-</Button>
-              <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'add')}>
-  <Plus className="h-4 w-4" />
-</Button>
+              <Button size="icon" variant="outline" onClick={(e) => { e.stopPropagation(); onQuickUpdate(product, 'remove'); }}>
+                <Minus className="h-4 w-4" />
+              </Button>
+              <Button size="icon" variant="outline" onClick={(e) => { e.stopPropagation(); onQuickUpdate(product, 'add'); }}>
+                <Plus className="h-4 w-4" />
+              </Button>
             </div>
           </div>
           

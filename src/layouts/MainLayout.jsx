@@ -2,7 +2,10 @@
 
 import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/supabaseClient';
-import { Menu, Plus, PenSquare, PackagePlus, Download } from 'lucide-react';
+
+// --- JEDYNA POPRAWKA: Łączymy wszystkie importy ikon w jedną, czystą linię ---
+import { Menu, Plus, PenSquare, PackagePlus, Download, ShoppingCart } from 'lucide-react';
+
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -21,22 +24,18 @@ import EditProduct from '@/pages/EditProduct';
 import QRPage from '@/pages/QRPage';
 import UpdatePassword from '@/pages/UpdatePassword';
 import PrintLabelsPage from '@/pages/PrintLabelsPage';
+import ListaZakupow from '@/pages/ListaZakupow';
 
 export default function MainLayout() {
   const navigate = useNavigate();
   const { canInstall, handleInstall } = usePWAInstall();
-
-  // --- TO JEST JEDYNA ZMIANA W LOGICE ---
-  // Przenosimy tę logikę do wnętrza komponentu
   const location = useLocation();
+
   const handleLogoClick = (e) => {
-    // Jeśli już jesteśmy na stronie głównej, zapobiegamy domyślnej akcji
-    // i ręcznie przeładowujemy stronę.
     if (location.pathname === '/') {
-      e.preventDefault(); // Zatrzymaj normalne działanie linku
-      window.location.reload(); // Odśwież stronę
+      e.preventDefault();
+      window.location.reload();
     }
-    // Jeśli jesteśmy na innej podstronie, link zadziała normalnie.
   };
 
   const handleLogout = async () => {
@@ -49,15 +48,13 @@ export default function MainLayout() {
       <header className="border-b sticky top-0 bg-background/95 backdrop-blur-sm z-10">
         <div className="container mx-auto flex h-16 items-center justify-between">
           
-          {/* --- I ZMIANA TUTAJ, w linku "Magazyn" --- */}
           <Link to="/" onClick={handleLogoClick} className="text-xl font-bold">
             Magazyn
           </Link>
 
           <nav className="hidden md:flex items-center gap-4">
             <Link to="/"><Button variant="ghost">Stan Magazynu</Button></Link>
-            <Link to="/zmien-stan"><Button variant="default">Zmień Stan</Button></Link>
-            <Link to="/dodaj-produkt"><Button variant="outline">Nowy Produkt</Button></Link>
+            <Link to="/lista-zakupow"><Button variant="ghost">Lista Zakupowa</Button></Link>
             <Link to="/update-password"><Button variant="secondary">Zmień Hasło</Button></Link>
             <Link to="/print-labels"><Button variant="outline">Drukuj QR</Button></Link>
             
@@ -79,11 +76,13 @@ export default function MainLayout() {
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem asChild><Link to="/">Stan Magazynu</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/lista-zakupow">Lista Zakupowa</Link></DropdownMenuItem>
                 <DropdownMenuItem asChild><Link to="/update-password">Zmień Hasło</Link></DropdownMenuItem>
+                <DropdownMenuItem asChild><Link to="/print-labels">Drukuj QR</Link></DropdownMenuItem>
                 
                 {canInstall && (
                     <DropdownMenuItem onClick={handleInstall}>
-                        <Download className="mr-2 h-4 w-4" /> Zainstaluj aplikację
+                        <Download className="mr-2 h-4 w-4" /> Zainstaluj
                     </DropdownMenuItem>
                 )}
 
@@ -94,7 +93,6 @@ export default function MainLayout() {
         </div>
       </header>
 
-      {/* Twoja reszta kodu jest idealna i pozostaje nietknięta */}
       <main className="container mx-auto p-4 md:p-8 pb-24">
         <Routes>
           <Route path="/" element={<Dashboard />} />
@@ -104,6 +102,7 @@ export default function MainLayout() {
           <Route path="/qr" element={<QRPage />} />
           <Route path="/update-password" element={<UpdatePassword />} />
           <Route path="/print-labels" element={<PrintLabelsPage />} />
+          <Route path="/lista-zakupow" element={<ListaZakupow />} />
           <Route path="*" element={<Dashboard />} />
         </Routes>
       </main>
