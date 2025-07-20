@@ -124,6 +124,11 @@ export default function MainLayout() {
               <PackagePlus className="mr-2 h-5 w-5" />
               <span>Nowy Produkt</span>
             </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onSelect={() => navigate('/lista-zakupow')} className="py-3 text-lg">
+              <PackagePlus className="mr-2 h-5 w-5" />
+              <span>Lista zakupów</span>
+            </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       </div>
