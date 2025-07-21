@@ -1,22 +1,25 @@
 // src/pages/Dashboard.jsx
 
-import { useState, useRef } from 'react';
+import { useState, useRef } from 'react'; // <<< ZMIANA NR 1: Usuwamy niepotrzebne importy
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ProductListItem from '@/components/ProductListItem';
 import SearchResultItem from '@/components/SearchResultItem';
 import { useProducts } from '@/hooks/useProducts';
 import { useQuickUpdate } from '@/hooks/useQuickUpdate';
-// Skaner na razie pominiemy, żeby było jeszcze prościej. Możemy go dodać jako trzeci hook.
+// --- ZMIANA NR 2: Importujemy nowy hook do skanera ---
+import { useQrScanner } from '@/hooks/useQrScanner';
 
 export default function Dashboard() {
   const [searchTerm, setSearchTerm] = useState('');
   
   const { loading, getProducts, filterAndGroup } = useProducts();
   const { promptForQuantity, QuantityDialog, ConfirmationDialog } = useQuickUpdate(getProducts);
+  // --- ZMIANA NR 3: Używamy nowego hooka ---
+  const { openScanner, ScannerDialog } = useQrScanner(setSearchTerm); 
+  
   const { grouped, filtered } = filterAndGroup(searchTerm);
 
   const renderContent = () => {
@@ -24,7 +27,7 @@ export default function Dashboard() {
     if (searchTerm.trim()) {
       return (
         <div className="flex flex-col gap-2">
-          {filtered.map(p => <SearchResultItem key={p.id} product={p} onQuickUpdate={promptForQuantity} />)}
+          {filtered.length > 0 ? filtered.map(p => <SearchResultItem key={p.id} product={p} onQuickUpdate={promptForQuantity} />) : <p className="text-center text-muted-foreground py-10">Nie znaleziono</p>}
         </div>
       );
     }
@@ -72,12 +75,15 @@ export default function Dashboard() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="w-full max-w-sm"
             />
-            {/* Tutaj można dodać przycisk skanera z jego własnego hooka */}
+            {/* --- ZMIANA NR 4: Dodajemy przycisk skanera --- */}
+            <Button variant="secondary" onClick={openScanner}>Skanuj Kod</Button>
           </div>
         </CardHeader>
         <CardContent>{renderContent()}</CardContent>
       </Card>
       
+      {/* --- ZMIANA NR 5: Renderujemy okna dialogowe z naszych hooków --- */}
+      {ScannerDialog}
       {QuantityDialog}
       {ConfirmationDialog}
     </div>
