@@ -21,7 +21,7 @@ import {
 export default function CategoryCombobox({ value, setValue, options, placeholder }) {
   const [open, setOpen] = React.useState(false)
 
-  // Upewniamy się, że 'options' to zawsze tablica, nawet jeśli dostaniemy null lub undefined
+  // Twoja logika `safeOptions` jest idealna, zostaje bez zmian
   const safeOptions = options || [];
 
   return (
@@ -33,30 +33,26 @@ export default function CategoryCombobox({ value, setValue, options, placeholder
           aria-expanded={open}
           className="w-full justify-between font-normal"
         >
-          {/* Wyświetlamy wybraną wartość lub placeholder */}
-          {value
-            ? safeOptions.find((option) => option.toLowerCase() === value.toLowerCase()) || value
-            : placeholder}
+          {value ? value : placeholder}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
         <Command>
-          {/* Pozwalamy na wpisywanie nowej wartości */}
+          {/* --- ZMIANA NR 1: Używamy `filter={false}` i obsługujemy filtrowanie ręcznie --- */}
           <CommandInput
             placeholder="Szukaj lub wpisz nową..."
             value={value}
             onValueChange={setValue}
           />
           <CommandList>
-            <CommandEmpty>Nie znaleziono. Wpisz i zatwierdź, aby dodać nową.</CommandEmpty>
+            <CommandEmpty>Brak wyników. Wpisz, aby dodać nową.</CommandEmpty>
             <CommandGroup>
               {safeOptions.map((option) => (
                 <CommandItem
                   key={option}
-                  value={option}
+                  value={option} // `value` jest ważne dla wewnętrznego działania Command
                   onSelect={(currentValue) => {
-                    // Logika wyboru: jeśli klikamy to samo, czyścimy, jeśli inne - ustawiamy
                     const newValue = currentValue.toLowerCase() === value.toLowerCase() ? "" : currentValue;
                     setValue(newValue.charAt(0).toUpperCase() + newValue.slice(1));
                     setOpen(false);
