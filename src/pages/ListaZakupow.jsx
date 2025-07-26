@@ -93,32 +93,7 @@ export default function ListaZakupow() {
       <h1 className="text-3xl font-bold">Lista Zakupowa</h1>
       <Card>
         <CardHeader>
-          <CardTitle>Z Magazynu (stan poniżej {NISKI_STAN})</CardTitle>
-          <CardDescription>Generowane automatycznie. Odhaczenie jest tylko tymczasowe.</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {shoppingList.length > 0 ? (
-            <div className="space-y-4">
-              {shoppingList.map(product => {
-                const isChecked = checkedItems.has(`product-${product.id}`);
-                return (
-                  <div key={`product-${product.id}`} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50">
-                    <Checkbox id={`product-item-${product.id}`} checked={isChecked} onCheckedChange={() => handleToggleShoppingListItem(product.id)} />
-                    <Label htmlFor={`product-item-${product.id}`} className={`flex-1 text-lg ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
-                      {product.nazwa} {product.wymiar || ''}
-                      <span className="ml-2 font-semibold text-red-500"> (Zostało: {product.ilosc} {product.jednostka})</span>
-                    </Label>
-                  </div>
-                );
-              })}
-            </div>
-          ) : <p className="text-sm text-muted-foreground">Brak produktów do uzupełnienia.</p>}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Dodatkowe Rzeczy (Wspólna Lista)</CardTitle>
+          <CardTitle>Dodatkowe rzeczy do kupienia (Wspólna Lista)</CardTitle>
           <CardDescription>Zmiany na tej liście są zapisywane dla wszystkich.</CardDescription>
         </CardHeader>
         <CardContent>
@@ -144,6 +119,31 @@ export default function ListaZakupow() {
           </form>
         </CardContent>
       </Card>
+      <Card>
+        <CardHeader>
+          <CardTitle>Z Magazynu (stan poniżej {NISKI_STAN})</CardTitle>
+          <CardDescription>Generowane automatycznie. Odhaczenie jest tylko tymczasowe.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {shoppingList.length > 0 ? (
+            <div className="space-y-4">
+              {shoppingList.map(product => {
+                const isChecked = checkedItems.has(`product-${product.id}`);
+                return (
+                  <div key={`product-${product.id}`} className="flex items-center space-x-3 p-2 rounded-md hover:bg-muted/50">
+                    <Checkbox id={`product-item-${product.id}`} checked={isChecked} onCheckedChange={() => handleToggleShoppingListItem(product.id)} />
+                    <Label htmlFor={`product-item-${product.id}`} className={`flex-1 text-lg ${isChecked ? 'line-through text-muted-foreground' : ''}`}>
+                      {product.nazwa} {product.wymiar || ''}
+                      <span className="ml-2 font-semibold text-red-500"> (Zostało: {product.ilosc} {product.jednostka})</span>
+                    </Label>
+                  </div>
+                );
+              })}
+            </div>
+          ) : <p className="text-sm text-muted-foreground">Brak produktów do uzupełnienia.</p>}
+        </CardContent>
+      </Card>
+
     </div>
   );
 }
