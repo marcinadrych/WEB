@@ -2,24 +2,33 @@
 
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
-// --- ZMIANA NR 1: Dodajemy import ikon ---
-import { Plus, Minus } from 'lucide-react'; 
+import { Plus, Minus } from 'lucide-react';
+// --- ZMIANA NR 1: Dodajemy importy do formatowania daty ---
+import { formatDistanceToNow } from 'date-fns';
+import { pl } from 'date-fns/locale';
 
-// --- ZMIANA NR 2: Komponent teraz przyjmuje nową właściwość `onQuickUpdate` ---
 export default function SearchResultItem({ product, onQuickUpdate }) {
   const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
 
+  // --- ZMIANA NR 2: Dodajemy logikę formatowania daty ---
+  const timeAgo = product.data_ostatniej_zmiany 
+    ? formatDistanceToNow(new Date(product.data_ostatniej_zmiany), { addSuffix: true, locale: pl })
+    : null;
+
   return (
-    // Używamy flex-col, żeby nowa sekcja była pod spodem
     <div className="border rounded-lg p-4 flex flex-col gap-4">
       
-      {/* Ta sekcja pozostaje bez zmian */}
       <div className="flex justify-between items-start">
         <div className="flex-grow">
-          <h3 className="font-bold text-lg">{product.nazwa}</h3>
+          <h3 className="font-bold text-lg">{product.nazwa} {product.wymiar || ''}</h3>
           <p className="text-sm text-muted-foreground">
             {product.kategoria} {product.podkategoria ? `/ ${product.podkategoria}` : ''}
           </p>
+          {timeAgo && (
+            <p className="text-xs text-muted-foreground mt-1">
+              Ostatnia zmiana: {timeAgo} przez {product.ostatnia_zmiana_przez || '---'}
+            </p>
+          )}
         </div>
         <div className="flex gap-2">
             <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
@@ -30,7 +39,12 @@ export default function SearchResultItem({ product, onQuickUpdate }) {
             </Link>
         </div>
       </div>
-
+      {product.uwagi && (
+        <div className="text-sm border-t pt-2 mt-2">
+          <strong>Uwagi:</strong>
+          <p className="text-muted-foreground whitespace-pre-wrap">{product.uwagi}</p>
+        </div>
+      )}
       <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
         <span className="font-semibold">Zmień stan:</span>
         <div className="flex items-center gap-2">
