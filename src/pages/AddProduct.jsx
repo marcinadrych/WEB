@@ -84,7 +84,7 @@ export default function AddProduct() {
         data_ostatniej_zmiany: new Date().toISOString(),
       });
       toast({ title: "Sukces!", description: `Produkt "${productName}" został pomyślnie dodany.` });
-      window.location.href = '/'; // Twarde przeładowanie dla pewności
+      window.location.href = '/';
     } catch (error) {
       console.error("Błąd z Supabase:", error);
       toast({ title: "Błąd serwera", description: error.message, variant: "destructive" });
@@ -92,6 +92,17 @@ export default function AddProduct() {
       setLoading(false);
     }
   }
+
+  // --- ZMIANA NR 1: Dodajemy logikę do generowania szablonów uwag ---
+  const getTodayDate = () => {
+    const today = new Date();
+    return `${String(today.getDate()).padStart(2, '0')}.${String(today.getMonth() + 1).padStart(2, '0')}.${today.getFullYear()}`;
+  };
+  const noteSuggestions = [
+    `Sprawdzone dnia: ${getTodayDate()}`,
+    "Sprawdzone - jest tego bardzo dużo nie ma sensu liczyć.",
+    "Wprowadzone, nie sprawdzone ile sztuk/mb/itp."
+  ];
 
   return (
     <div className="flex flex-col gap-6">
@@ -102,19 +113,10 @@ export default function AddProduct() {
           <form onSubmit={handleSubmit} className="flex flex-col gap-4">
             <div className="grid gap-2">
               <Label htmlFor="productName">Nazwa produktu</Label>
-              <Input
-                id="productName"
-                value={productName}
-                onChange={(e) => setProductName(e.target.value)}
-                required
-                autoComplete="off"
-              />
-              {/* --- TO JEST POPRAWIONY BLOK --- */}
+              <Input id="productName" value={productName} onChange={(e) => setProductName(e.target.value)} required autoComplete="off" />
               {(isSearching || suggestions.length > 0) && (
                 <div className="border rounded-md mt-2 p-2 bg-muted/50 text-sm">
-                  {isSearching ? (
-                    <p className="text-muted-foreground">Szukanie...</p>
-                  ) : (
+                  {isSearching ? (<p className="text-muted-foreground">Szukanie...</p>) : (
                     <>
                       <p className="font-semibold mb-2">Znaleziono podobne produkty:</p>
                       <ul className="flex flex-col gap-1">
@@ -135,7 +137,26 @@ export default function AddProduct() {
             <div className="grid gap-2"><Label>Kategoria</Label><CategoryCombobox value={category} setValue={setCategory} options={allCategories} placeholder="Wybierz lub wpisz nową..." /></div>
             <div className="grid gap-2"><Label>Podkategoria</Label><CategoryCombobox value={subcategory} setValue={setSubcategory} options={allSubcategories} placeholder="Wybierz lub wpisz nową..." /></div>
             <div className="grid gap-2"><Label>Wymiar</Label><CategoryCombobox value={dimension} setValue={setDimension} options={allDimensions} placeholder="Wybierz lub wpisz nowy..." /></div>
-            <div className="grid gap-2"><Label htmlFor="notes">Uwagi</Label><Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} /></div>
+            
+            {/* --- ZMIANA NR 2: Modyfikujemy blok 'Uwagi' --- */}
+            <div className="grid gap-2">
+              <Label htmlFor="notes">Uwagi (opcjonalnie)</Label>
+              <Textarea id="notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+              <div className="flex flex-wrap gap-2 mt-2">
+                {noteSuggestions.map((suggestion, index) => (
+                  <Button
+                    key={index}
+                    type="button" // Ważne, żeby nie wysyłał formularza
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setNotes(suggestion)}
+                  >
+                    {suggestion}
+                  </Button>
+                ))}
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               <div className="col-span-2 grid gap-2"><Label htmlFor="initialQuantity">Ilość</Label><Input id="initialQuantity" type="number" min="0" step="any" value={initialQuantity} onChange={(e) => setInitialQuantity(e.target.value)} required /></div>
               <div className="grid gap-2"><Label htmlFor="unit">Jednostka</Label><Select onValueChange={setUnit} defaultValue="szt."><SelectTrigger id="unit"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="szt.">szt.</SelectItem><SelectItem value="mb">mb</SelectItem><SelectItem value="kg">kg</SelectItem><SelectItem value="op.">op.</SelectItem><SelectItem value="m²">m²</SelectItem></SelectContent></Select></div>
