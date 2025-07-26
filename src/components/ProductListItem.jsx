@@ -3,24 +3,41 @@
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-// --- ZMIANA NR 1: Dodajemy import ikon ---
+import { getUserName } from '@/lib/users';
 import { Plus, Minus } from 'lucide-react';
+// --- ZMIANA NR 1: Dodajemy importy do formatowania daty ---
+import { formatDistanceToNow } from 'date-fns';
+import { pl } from 'date-fns/locale';
 
-// --- ZMIANA NR 2: Komponent teraz przyjmuje nową właściwość `onQuickUpdate` ---
 export default function ProductListItem({ product, onQuickUpdate }) {
   const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
+  
+  // --- ZMIANA NR 2: Dodajemy logikę formatowania daty i pobierania imienia ---
+  const displayName = getUserName(product.ostatnia_zmiana_przez);
+  const timeAgo = product.data_ostatniej_zmiany 
+    ? formatDistanceToNow(new Date(product.data_ostatniej_zmiany), { addSuffix: true, locale: pl })
+    : null;
 
   return (
     <AccordionItem value={`product-${product.id}`} key={product.id} className="border-b last:border-b-0">
       <AccordionTrigger className="hover:no-underline p-4 text-left">
         <div className="flex justify-between items-center w-full">
-          <span className="font-medium text-lg">{product.nazwa}</span>
-          <span className={`font-bold text-2xl ${product.ilosc < 5 ? 'text-red-500' : 'text-green-500'}`}>
+          {/* --- ZMIANA NR 3: Dodajemy nową sekcję z informacjami pod nazwą produktu --- */}
+          <div className="flex-grow">
+            <span className="font-medium text-lg">{product.nazwa} {product.wymiar || ''}</span>
+            {timeAgo && (
+              <p className="text-xs text-muted-foreground text-left mt-1">
+                Ostatnia zmiana: {timeAgo} przez {displayName}
+              </p>
+            )}
+          </div>
+          <span className={`font-bold text-2xl ml-4 ${product.ilosc < 5 ? 'text-red-500' : 'text-green-500'}`}>
             {product.ilosc} {product.jednostka}
           </span>
         </div>
       </AccordionTrigger>
       <AccordionContent>
+        {/* Twoja reszta kodu jest idealna i pozostaje nietknięta */}
         <div className="flex flex-col gap-4 p-4 border-t bg-muted/50 text-base">
           <div className="grid grid-cols-2 gap-4">
             <div><strong>Kategoria:</strong><br/>{product.kategoria}</div>
@@ -33,7 +50,6 @@ export default function ProductListItem({ product, onQuickUpdate }) {
             </div>
           )}
           
-          {/* --- ZMIANA NR 3: Dodajemy nową sekcję do szybkiej zmiany stanu --- */}
           <div className="flex items-center justify-between p-2 mt-2 bg-background rounded-md">
             <span className="font-semibold">Szybka zmiana stanu:</span>
             <div className="flex items-center gap-2">
@@ -50,7 +66,6 @@ export default function ProductListItem({ product, onQuickUpdate }) {
             <a href={qrPageUrl} target="_blank" rel="noopener noreferrer">
               <Button variant="outline" size="sm">Pokaż QR</Button>
             </a>
-            
             <Link to={`/edytuj-produkt/${product.id}`}>
               <Button size="sm">Edytuj</Button>
             </Link>
