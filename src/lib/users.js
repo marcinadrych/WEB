@@ -3,7 +3,7 @@
 // To jest nasza mała, wewnętrzna baza danych e-maili i imion.
 const userMap = {
   // PRZYKŁAD - ZASTĄP PRAWDZIWYMI DANYMI
-  'cinekadrych@gmail.com': 'Marcin - Hydraulik amator',
+  'cinekadrych@gmail.com': 'Marian - Hydraulik amator',
   'jarekadrych321@gmail.com': 'Jarek - Szef',
   'mateuszadrych@o2.pl': 'Mateusz - Kiełownik',
   'gdaniec55@gmail.com': 'Marek - Hydraulik, 15 lat doświadczenia (z nadgodzinami)',

@@ -3,17 +3,20 @@
 import { Link } from 'react-router-dom';
 import { Button } from "@/components/ui/button";
 import { Plus, Minus } from 'lucide-react';
-// --- ZMIANA NR 1: Dodajemy importy do formatowania daty ---
 import { formatDistanceToNow } from 'date-fns';
 import { pl } from 'date-fns/locale';
+// --- ZMIANA NR 1: Dodajemy import naszej nowej funkcji ---
+import { getUserName } from '@/lib/users';
 
 export default function SearchResultItem({ product, onQuickUpdate }) {
   const qrPageUrl = `/qr?value=${product.id}&name=${encodeURIComponent(product.nazwa)}`;
-
-  // --- ZMIANA NR 2: Dodajemy logikę formatowania daty ---
+  
   const timeAgo = product.data_ostatniej_zmiany 
     ? formatDistanceToNow(new Date(product.data_ostatniej_zmiany), { addSuffix: true, locale: pl })
     : null;
+  
+  // --- ZMIANA NR 2: Używamy naszej funkcji do tłumaczenia e-maila na imię ---
+  const displayName = getUserName(product.ostatnia_zmiana_przez);
 
   return (
     <div className="border rounded-lg p-4 flex flex-col gap-4">
@@ -25,8 +28,9 @@ export default function SearchResultItem({ product, onQuickUpdate }) {
             {product.kategoria} {product.podkategoria ? `/ ${product.podkategoria}` : ''}
           </p>
           {timeAgo && (
+            // --- ZMIANA NR 3: Używamy 'displayName' zamiast 'product.ostatnia_zmiana_przez' ---
             <p className="text-xs text-muted-foreground mt-1">
-              Ostatnia zmiana: {timeAgo} przez {product.ostatnia_zmiana_przez || '---'}
+              Ostatnia zmiana: {timeAgo} przez {displayName}
             </p>
           )}
         </div>
@@ -39,13 +43,15 @@ export default function SearchResultItem({ product, onQuickUpdate }) {
             </Link>
         </div>
       </div>
+
+      {/* Reszta Twojego kodu pozostaje nietknięta */}
       {product.uwagi && (
         <div className="text-sm border-t pt-2 mt-2">
           <strong>Uwagi:</strong>
           <p className="text-muted-foreground whitespace-pre-wrap">{product.uwagi}</p>
         </div>
       )}
-      <div className="flex items-center justify-between p-2 bg-muted/50 rounded-md">
+      <div className="flex items-center justify-between p-2 bg-muted/themed/50 rounded-md">
         <span className="font-semibold">Zmień stan:</span>
         <div className="flex items-center gap-2">
           <Button size="icon" variant="outline" onClick={() => onQuickUpdate(product, 'remove')}>
